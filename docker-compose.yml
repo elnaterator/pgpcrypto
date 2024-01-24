@@ -1,0 +1,11 @@
+version: '3'
+services:
+  app:
+    image: gnupg-python-lambda
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ~/.aws:/root/.aws
+    ports:
+      - 9000:8080

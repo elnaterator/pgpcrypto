@@ -1,0 +1,10 @@
+# Ignore downloaded files
+gnupg-*.tar.bz2
+gpg
+
+# poetry
+.venv
+dist/
+**/__pycache__/
+requirements.txt
+.pytest_cache
