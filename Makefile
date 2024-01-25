@@ -6,10 +6,11 @@ SERVICE_NAME = app
 
 gpg-build: ## Build the gpg binary from source on an Amazon Linux 2 EC2 instance and then download gpg binary from s3
 	chmod +x scripts/build_gpg.sh
-	./scripts/build_gpg.sh all
+	./scripts/build_gpg.sh build
 
 gpg: ## Try to download the gpg binary from s3 at $GNUPG_S3_LOCATION/gpg or else call gpg-build.
-	aws s3 cp $(GNUPG_S3_LOCATION)/gpg . || make gpg-build
+	chmod +x scripts/build_gpg.sh
+	./scripts/build_gpg.sh fetch || make gpg-build
 
 build: gpg ## Build python layer if the gpg binary needs to be built from source
 	chmod +x scripts/build_layer.sh

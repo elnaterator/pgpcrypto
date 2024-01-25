@@ -1,13 +1,18 @@
 # Library and Lambda Layer for PGP Encryption and Decryption
 
-This is a project around python-gnupg to simplify PGP encryption and decryption, especially within a lambda function.
+This is a project to simplify PGP encryption and decryption for lambda functions.
 
-This will build the gpg binary from source on an Amazon Linux 2 environment, since lambda containers do not have a full gpg implementation available.
+* Library `pgpcrypto` with simple API for encryption and decryption of files.
+* Build a `gpg` binary from source for `Amazon Linux 2` and package with `lambda_layer.zip`.
+* Test in lambda docker image locally.
+* Deploy to lambda layer.
 
 ## Prerequisites
 
-* An `Amazon Linux 2` EC2 instance that you have access to via ssh
-* An s3 bucket that you have access to locally and from your ec2 instance that uses kms object encryption
+* AWS CLI v2
+* To build the `gpg` binary from source:
+  * An `Amazon Linux 2` EC2 instance (must have ssh access).
+* 
 
 ## Build, Test, Deploy
 
