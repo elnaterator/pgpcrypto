@@ -20,32 +20,34 @@ class TestGpgWrapper(unittest.TestCase):
         shutil.rmtree(self.tmpdatadir)
         return super().tearDown()
 
-    def test_import_key_file(self):
+    def test_import_keys_multiple_times(self):
         s = get_pgp_secrets()
         pgpw = pgp.PgpWrapper(
-            s["key_id"],
-            s["passphrase"],
-            s["public_key"],
-            s["secret_key"],
             gnupghome=self.gnupghome,
             gpgbinary="gpg",
+        )
+        pgpw.import_key_pair(
+            key_id=s["key_id"],
+            passphrase=s["passphrase"],
+            public_key=s["public_key"],
+            secret_key=s["secret_key"],
         )
         cnt_before = pgpw.count_keys()
         assert cnt_before == 2
 
-        # import public key
+        # import same public key
         pub_res = pgpw.import_key_file("./data/test.pub.asc")
         assert pub_res["keys_found"] == 1
         assert pub_res["pub_keys_imported"] == 0
         assert pub_res["sec_keys_imported"] == 0
 
-        # import secret key
+        # import same secret key
         sec_res = pgpw.import_key_file("./data/test.sec.asc")
         assert sec_res["keys_found"] == 1
         assert sec_res["pub_keys_imported"] == 0
         assert sec_res["sec_keys_imported"] == 0
 
-        # should have 2 keys, 1 pub, 1 sec
+        # should still have 2 keys, 1 public, 1 secret
         print_keys(pgpw)
         cnt_after = pgpw.count_keys()
         assert cnt_after == 2
@@ -53,12 +55,14 @@ class TestGpgWrapper(unittest.TestCase):
     def test_encrypt_decrypt_file(self):
         s = get_pgp_secrets()
         pgpw = pgp.PgpWrapper(
-            s["key_id"],
-            s["passphrase"],
-            s["public_key"],
-            s["secret_key"],
             gnupghome=self.gnupghome,
             gpgbinary="gpg",
+        )
+        pgpw.import_key_pair(
+            key_id=s["key_id"],
+            passphrase=s["passphrase"],
+            public_key=s["public_key"],
+            secret_key=s["secret_key"],
         )
 
         # set path to test files
@@ -88,12 +92,14 @@ class TestGpgWrapper(unittest.TestCase):
     def test_encrypt_failure_bad_key_id(self):
         s = get_pgp_secrets()
         pgpw = pgp.PgpWrapper(
-            "bad_key_id",
-            s["passphrase"],
-            s["public_key"],
-            s["secret_key"],
             gnupghome=self.gnupghome,
             gpgbinary="gpg",
+        )
+        pgpw.import_key_pair(
+            key_id="bad_key_id",
+            passphrase=s["passphrase"],
+            public_key=s["public_key"],
+            secret_key=s["secret_key"],
         )
 
         # set path to test files
@@ -110,12 +116,14 @@ class TestGpgWrapper(unittest.TestCase):
     def test_decrypt_failure_bad_passphrase(self):
         s = get_pgp_secrets()
         pgpw = pgp.PgpWrapper(
-            s["key_id"],
-            "bad_passphrase",
-            s["public_key"],
-            s["secret_key"],
             gnupghome=self.gnupghome,
             gpgbinary="gpg",
+        )
+        pgpw.import_key_pair(
+            key_id=s["key_id"],
+            passphrase="bad_passphrase",
+            public_key=s["public_key"],
+            secret_key=s["secret_key"],
         )
 
         # set path to test files
@@ -127,7 +135,7 @@ class TestGpgWrapper(unittest.TestCase):
 
         # decrypt string and ensure it fails
         with self.assertRaises(ValueError) as cm:
-            pgpw.decrypt_file(enc_path)
+            pgpw.decrypt_file(enc_path, "data/test.txt.dec")
 
         # ensure error message is correct
         assert "Unable to decrypt file" in str(cm.exception)

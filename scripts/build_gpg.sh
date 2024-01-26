@@ -7,58 +7,27 @@
 #
 
 # Update these to the location of the gnupg tarball
-GNUPG_TARBALL="gnupg-1.4.23.tar.bz2"
+GNUPG_TARBALL="${GNUPG_TARBALL:-gnupg-1.4.23.tar.bz2}"
 
 # Print usage info
 print_help() {
     echo ""
-    echo "Build the gpg binary for Amazon Linux 2 from source. See https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg."
+    echo "Build the GnuPG binary (gpg) from source for a target OS. See https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg."
+    echo "This will connect to a remote EC2 instance to build the gpg binary, for use in a lambda function this should be Amazon Linux 2 or Amazon Linux 2023"
+    echo "Note that it is recommended you use the default version of gnupg, others have not been tested."
     echo ""
     echo "Configure with environment variables:"
-    echo "  export GNUPG_S3_LOCATION=\"s3://yourbucket/yourprefix\"                         S3 location for the gpg binary"
-    echo "  export GNUPG_S3_KMS_KEY=\"arn:aws:kms:us-east-1:123456789012:key/123456...\"    KMS key used to encrypt the s3 objects"
-    echo "  export GNUPG_EC2_HOST=\"10.10.10.10\"                                           EC2 host to build the gpg binary on"
-    echo "  export GNUPG_EC2_SSH_KEY=\"~/.ssh/yourkey.pem\"                                 SSH key to use to connect to the EC2 host"
+    echo "  export GNUPG_EC2_HOST=\"10.10.10.10\"               EC2 host to build the gpg binary on"
+    echo "  export GNUPG_EC2_SSH_KEY=\"~/.ssh/yourkey.pem\"     SSH key to use to connect to the EC2 host"
+    echo "  export GNUPG_TARBALL=\"gnupg-1.4.23.tar.bz2\"       Filename of gnupg tarball to use (optional, current/default value is $GNUPG_TARBALL)"
     echo ""
     echo "Commands:"
-    echo "  ./build_gpg.sh fetch        Download the gpg binary from s3 location"
-    echo "  ./build_gpg.sh build        Build the gpg binary on the EC2 host"
-    echo ""
-    echo "Notes:"
-    echo "  - Update GNUPG_TARBALL to point to the correct gnupg version (see https://www.gnupg.org/ftp/gcrypt/gnupg/)"
+    echo "  ./build_gpg.sh build        Build on a remote EC2 instance specified by env vars"
+    echo "  ./build_gpg.sh build_ec2    Build gpg binary (if you are already on target EC2 instance)"
     echo ""
 }
 
-fetch() {
-
-    if [[ -z "${GNUPG_S3_LOCATION}" ]]; then
-        echo -e "\nError: missing environment var: GNUPG_S3_LOCATION"
-        print_help
-        exit 1
-    fi
-
-    aws s3 cp $GNUPG_S3_LOCATION/gpg .
-
-}
-
-push() {
-
-    # If we have a s3 location, push the tarball to s3
-    if [[ -n "${GNUPG_S3_LOCATION}" ]]; then
-        echo "Pushing gpg binary to s3: $GNUPG_S3_LOCATION/gpg..."
-        if [ -n "$GNUPG_S3_KMS_KEY" ]; then
-            aws s3 cp ./gpg $GNUPG_S3_LOCATION/gpg --sse aws:kms --sse-kms-key-id $GNUPG_S3_KMS_KEY
-        else
-            aws s3 cp ./gpg $GNUPG_S3_LOCATION/gpg
-        fi
-    else
-        echo "Missing environment var: GNUPG_S3_LOCATION, skipping push to s3."
-    fi
-
-    exit $?
-
-}
-
+# Build the gpg binary (this part runs locally, connects to ec2 instance to build)
 build() {
 
     if [[ -z "${GNUPG_EC2_HOST}" || -z "${GNUPG_EC2_SSH_KEY}" ]]; then
@@ -89,7 +58,7 @@ build() {
 
 }
 
-# Build the gpg binary (this part runs on ec2 instance)
+# Build the gpg binary (this part runs on ec2 instance - Amazon Linux 2)
 build_ec2() {
 
     # Install dependencies

@@ -10,37 +10,78 @@ class PgpWrapper:
 
     def __init__(
         self,
-        key_id: str = None,
-        passphrase: str = None,
-        public_key: str = None,
-        secret_key: str = None,
         gnupghome: str = "/tmp/.gnupghome",
         gpgbinary: str = "/opt/python/gpg",
     ) -> None:
         """
-        Initializes a PGP object.
+        Initialize the PGP wrapper gnupghome directory and path to gpg binary.
+        """
+
+        # Create the gnupghome directory if it doesn't exist
+        if not os.path.exists(gnupghome):
+            os.makedirs(gnupghome)
+            os.chmod(gnupghome, 0o700)
+
+        # Initialize the GPG object
+        self.gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gnupghome)
+
+        # Dictionary of key pairs, key is key_id
+        self._key_pairs = {}
+
+    def import_key_pair(
+        self,
+        key_id: str = "",
+        passphrase: str = "",
+        public_key: str = "",
+        secret_key: str = "",
+    ) -> None:
+        """
+        Import a key pair along with the key ID and passphrase.
+
+        Each instance of PgpWrapper can only have 1 associated key id at a time.
+        When you encrypt, the key id and public key used will be the last one that
+        was imported.
+
+        When you decrypt, however, any of the secret key and passphrase combos that
+        have been imported may be used.
 
         Args:
             key_id (str): The key ID associated with the PGP key.
             passphrase (str): The passphrase to unlock the PGP key.
             public_key (str): The ASCII armored public key.
             secret_key (str): The ASCII armored secret key.
-            gnupghome (str, optional): The path to the GnuPG home directory. Defaults to "/tmp/.gnupghome".
         """
 
-        if not os.path.exists(gnupghome):
-            os.makedirs(gnupghome)
-            os.chmod(gnupghome, 0o700)
-        self.gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gnupghome)
-
         # import the keys
-        self.key_id = key_id
-        self.passphrase = passphrase
+        if key_id:
+            self.key_id = key_id
+        if passphrase:
+            self.passphrase = passphrase
+
+        # You can choose to only import a public key or a secret key
+        # Then you will only be able to encrypt or decrypt, respectively
+
         if secret_key:
-            res = self.import_keys(secret_key)
+            res = self.gpg.import_keys(secret_key)
+            result = res.results[0]
+            if "ok" not in result:
+                raise ImportError(f"Unable to import secret PGP key: {res.stderr}")
+            fingerprint = result["fingerprint"]
+            key_pair_data = self._key_pairs.get(fingerprint, {})
+            key_pair_data["secret_key"] = secret_key
+            if not passphrase:
+                raise ValueError("passphrase is required when importing a secret key")
+            key_pair_data["passphrase"] = passphrase
+            self._key_pairs[fingerprint] = key_pair_data
+
         if public_key:
-            res = self.import_keys(public_key)
+            res = self.gpg.import_keys(secret_key)
+            result = res.results[0]
+            if "ok" not in result:
+                raise ImportError(f"Unable to import public PGP key: {res.stderr}")
             self.gpg.trust_keys(res["key_id"], "TRUST_ULTIMATE")
+            fingerprint = result[0]
+            key_pair_data = self._key_pairs.get(fingerprint, {})
 
     def get_keys(
         self,
@@ -86,6 +127,7 @@ class PgpWrapper:
         Returns:
             dict: The result of the key import operation.
         """
+
         res = self.gpg.import_keys(ascii_key_data)
         if res.returncode != 0:
             raise ImportError(f"Unable to import PGP key(s): {res.stderr}")
@@ -96,13 +138,13 @@ class PgpWrapper:
             "sec_keys_imported": res.sec_imported,
         }
 
-    def encrypt_file(self, file_path: str, output_file_path: str = None) -> None:
+    def encrypt_file(self, file_path: str, output_file_path: str) -> None:
         """
         Encrypts a file using PGP.
 
         Args:
             file_path (str): The path to the file to encrypt.
-            output_file_path (str, optional): The path to save the encrypted file. Defaults to None.
+            output_file_path (str): The path to save the encrypted file.
         """
         result = self.gpg.encrypt_file(
             file_path,
@@ -113,13 +155,13 @@ class PgpWrapper:
         if not result.ok:
             raise ValueError(f"Unable to encrypt file: {result.stderr}")
 
-    def decrypt_file(self, file_path: str, output_file_path: str = None) -> None:
+    def decrypt_file(self, file_path: str, output_file_path: str) -> None:
         """
         Decrypts a file using PGP.
 
         Args:
             file_path (str): The path to the file to decrypt.
-            output_file_path (str, optional): The path to save the decrypted file. Defaults to None.
+            output_file_path (str): The path to save the decrypted file.
         """
         result = self.gpg.decrypt_file(
             file_path,

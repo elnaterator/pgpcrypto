@@ -7,12 +7,14 @@ SERVICE_NAME = app
 gpg-build: ## Build the gpg binary from source on an Amazon Linux 2 EC2 instance and then download gpg binary from s3
 	chmod +x scripts/build_gpg.sh
 	./scripts/build_gpg.sh build
+	chmod +x scripts/s3_gpg_cache.sh
+	./scripts/s3_gpg_cache.sh push
 
 gpg: ## Try to download the gpg binary from s3 at $GNUPG_S3_LOCATION/gpg or else call gpg-build.
-	chmod +x scripts/build_gpg.sh
-	./scripts/build_gpg.sh fetch || make gpg-build
+	chmod +x scripts/s3_gpg_cache.sh
+	./scripts/s3_gpg_cache.sh pull || make gpg-build
 
-build: gpg ## Build python layer if the gpg binary needs to be built from source
+build: gpg ## Build pgpcrypto python library and lambda layer, including the gpg binary
 	chmod +x scripts/build_layer.sh
 	./scripts/build_layer.sh
 	
@@ -35,7 +37,7 @@ test-local: ## Run unit tests locally via poetry
 
 test-docker: build start invoke stop ## Start lambda docker container, invoke test lambda function tests/lambda.py, and stop container
 
-bash: ## Run bash in docker container
+bash: ## Run bash in lambda docker container
 	docker-compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
 
 help: ## Print these help docs

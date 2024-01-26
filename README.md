@@ -1,6 +1,6 @@
 # Library and Lambda Layer for PGP Encryption and Decryption
 
-This is a project to simplify PGP encryption and decryption for lambda functions.
+This is a project to simplify PGP encryption and decryption for lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available.
 
 * Library `pgpcrypto` with simple API for encryption and decryption of files.
 * Build a `gpg` binary from source for `Amazon Linux 2` and package with `lambda_layer.zip`.
@@ -9,10 +9,10 @@ This is a project to simplify PGP encryption and decryption for lambda functions
 
 ## Prerequisites
 
-* AWS CLI v2
+* To deploy lambda layers or store your pre-built gpg binary in s3:
+  * AWS CLI
 * To build the `gpg` binary from source:
-  * An `Amazon Linux 2` EC2 instance (must have ssh access).
-* 
+  * An EC2 instance with `Amazon Linux 2`.
 
 ## Build, Test, Deploy
 
@@ -54,8 +54,10 @@ Simplify the usage and setup for basic encryption / decryption of files.
 ```python
 from pgpcrypto import pgp
 
-pgpw = pgp.PgpWrapper(
-    key_id: 'Test User', # recipient name, email, or key id, fingerprint
+pgpw = pgp.PgpWrapper()
+
+pgpw.import_key_pair(
+    key_id: 'Test User', # recipient name or email, or keyid or fingerprint
     passphrase: 'Passphrase12345',
     public_key: open('test.pub.asc').read(),
     secret_key: open('test.sec.asc').read(),
@@ -66,14 +68,14 @@ pgpw.encrypt_file("file.txt", "encrypted_file.txt.pgp")
 pgpw.decrypt_file("encrypted_file.txt.pgp", "decrypted_file.txt")
 ```
 
-You can also import additional keys.
+You can also import additional keys
 
 ```python
-# Import keys from a file
-pgpw.import_key_file('path/to/ascii_key.pem')
+# Import 
+pgpw.import_key_pair('path/to/ascii_key.pem')
 
 # Import keys from a string
-ascii_str = open('path/to/ascii_key.pem').read()
+ascii_str = open('path/to/ascii_keys.pem').read()
 pgpw.import_keys(ascii_str)
 
 # Fetch metadata on keys
@@ -85,11 +87,18 @@ The `gpg` binary comes bundled with the `lambda_layer.zip` file.  The default va
 
 ```python
 pgpw = pgp.PgpWrapper(
-    key_id: 'Test User', # recipient name, email, or key id, fingerprint
+    key_id: 'Test User', # recipient name, recipient email, key id, or key fingerprint
     passphrase: 'Passphrase12345',
     public_key: open('test.pub.asc').read(),
     secret_key: open('test.sec.asc').read(),
     gpgbinary: '/opt/python/gpg', # showing default value
     gnupghome: '/tmp/.gnupghome', # showing default value
 )
+```
+
+If you need to do more than the wrapper library offers, you can access the underlying gpg instance from the `python-gnupg` library as well.
+
+```python
+# Get the instance of gnupg.GPG() from the python-gnupg library
+pgpw.gpg.get_recipients(ascii_encrypted_message)
 ```
