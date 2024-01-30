@@ -25,7 +25,7 @@ gpg-build: ## Build gpg binary from source EC2 instance
 	chmod +x scripts/build_gpg.sh
 	./scripts/build_gpg.sh build
 
-# Lambda docker container
+# Docker
 	
 start: ## Start docker container running lambda function with pgpcrypto layer and tests/lambda.py
 	docker-compose -f $(COMPOSE_FILE) up -d $(SERVICE_NAME) --build
@@ -38,7 +38,7 @@ invoke: ## Invoke the function test lambda function in docker container
 	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9000/2015-03-31/functions/function/invocations
 	@echo "\n"
 
-# Tests
+# Test
 
 test: unittest test-lambda-docker ## Run unit tests and then lambda test via docker container
 
@@ -50,6 +50,12 @@ test-lambda-docker: build start invoke stop ## Start lambda docker container, in
 
 bash: ## Run bash in lambda docker container
 	docker-compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
+
+# Release
+
+release-experian: ## Release a new version of pgpcrypto to experian artifactory
+	chmod +x scripts/release-experian.sh
+	./scripts/release-experian.sh
 
 deploy: ## Deploy to a lambda layer with name LAYER
 	aws lambda publish-layer-version \

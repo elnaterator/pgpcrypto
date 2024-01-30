@@ -1,6 +1,6 @@
 # Library and Lambda Layer for PGP Encryption and Decryption
 
-This is a project to simplify PGP encryption and decryption for lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available.
+This is a project to simplify PGP encryption and decryption for lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available. This is intended for python3.10 or python3.11 runtimes.
 
 * Library `pgpcrypto` with simple API for encryption and decryption of files.
 * Build a `gpg` binary from source for `Amazon Linux 2` and package with `lambda_layer.zip`.
@@ -41,6 +41,9 @@ make test
 
 # Deploy to layer
 make deploy LAYER=my-lambda-layer
+
+# Release to experian artifactory
+make release-experian
 
 # More options
 make
