@@ -1,0 +1,29 @@
+{
+    "gpg": "<gnupg.GPG object at 0x107fb0210>",
+    "results": [
+        {
+            "fingerprint": "325C79D44776E29A2D85D07CEC37905EDA2A0097",
+            "ok": "1",
+            "text": "Not actually changed\nEntirely new key\n"
+        }
+    ],
+    "fingerprints": [
+        "325C79D44776E29A2D85D07CEC37905EDA2A0097"
+    ],
+    "count": 1,
+    "no_user_id": 0,
+    "imported": 1,
+    "imported_rsa": 0,
+    "unchanged": 0,
+    "n_uids": 0,
+    "n_subk": 0,
+    "n_sigs": 0,
+    "n_revoc": 0,
+    "sec_read": 0,
+    "sec_imported": 0,
+    "sec_dups": 0,
+    "not_imported": 0,
+    "stderr": "gpg: keybox \"/Users/c11309a/Workspace/collection_advantage/gnupg-python-lambda/./.gnupghome/pubring.kbx\" created\ngpg: /Users/c11309a/Workspace/collection_advantage/gnupg-python-lambda/./.gnupghome/trustdb.gpg: trustdb created\n[GNUPG:] KEY_CONSIDERED 325C79D44776E29A2D85D07CEC37905EDA2A0097 0\ngpg: key EC37905EDA2A0097: public key \"Test User (Test PGP Key) <test.user@example.com>\" imported\n[GNUPG:] IMPORTED EC37905EDA2A0097 Test User (Test PGP Key) <test.user@example.com>\n[GNUPG:] IMPORT_OK 1 325C79D44776E29A2D85D07CEC37905EDA2A0097\ngpg: Total number processed: 1\ngpg:               imported: 1\n[GNUPG:] IMPORT_RES 1 0 1 0 0 0 0 0 0 0 0 0 0 0 0\n",
+    "data": "",
+    "returncode": 0
+}

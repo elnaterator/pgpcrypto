@@ -12,7 +12,7 @@ print_help() {
     echo "Push or pull gpg binary from s3 bucket. See https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg."
     echo ""
     echo "Configure with environment variables:"
-    echo "  export GNUPG_S3_LOCATION=\"s3://yourbucket/yourprefix\"                         S3 location for the gpg binary"
+    echo "  export GNUPG_S3_LOCATION=\"s3://yourbucket/yourprefix/gpg\"                     S3 location for the gpg binary"
     echo "  export GNUPG_S3_KMS_KEY=\"arn:aws:kms:us-east-1:123456789012:key/123456...\"    KMS key used to encrypt the s3 objects (optional, will encrypt on push if provided)"
     echo ""
     echo "Commands:"
@@ -29,7 +29,7 @@ pull() {
         exit 1
     fi
 
-    aws s3 cp $GNUPG_S3_LOCATION/gpg .
+    aws s3 cp $GNUPG_S3_LOCATION .
 
 }
 
@@ -37,11 +37,11 @@ push() {
 
     # If we have a s3 location, push the gpg binary to s3
     if [[ -n "${GNUPG_S3_LOCATION}" ]]; then
-        echo "Pushing gpg binary to s3: $GNUPG_S3_LOCATION/gpg..."
+        echo "Pushing gpg binary to s3: $GNUPG_S3_LOCATION..."
         if [ -n "$GNUPG_S3_KMS_KEY" ]; then
-            aws s3 cp ./gpg $GNUPG_S3_LOCATION/gpg --sse aws:kms --sse-kms-key-id $GNUPG_S3_KMS_KEY
+            aws s3 cp ./gpg $GNUPG_S3_LOCATION --sse aws:kms --sse-kms-key-id $GNUPG_S3_KMS_KEY
         else
-            aws s3 cp ./gpg $GNUPG_S3_LOCATION/gpg
+            aws s3 cp ./gpg $GNUPG_S3_LOCATION
         fi
     else
         echo -e "\nMissing environment var: GNUPG_S3_LOCATION, skipping push of 'gpg' binary to s3."

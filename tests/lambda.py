@@ -1,6 +1,7 @@
 import json
 import os
 import pgpcrypto.pgp as pgp
+import array
 
 
 def lambda_handler(event, context):
@@ -13,15 +14,11 @@ def lambda_handler(event, context):
         secret_key = f.read()
 
     # Initialize the PGP wrapper
-    pgpw = pgp.PgpWrapper(key_id, passphrase)
+    pgpw = pgp.PgpWrapper()
 
     # Import the PGP keys
-    pgpw.import_key_pair(
-        key_id=key_id,
-        passphrase=passphrase,
-        public_key=public_key,
-        secret_key=secret_key,
-    )
+    pgpw.import_public_key(public_key=public_key, recipient=key_id)
+    pgpw.import_secret_key(secret_key=secret_key, passphrase=passphrase)
 
     # Encrypt the file
     pgpw.encrypt_file("data/test.txt", "data/test.txt.pgp")

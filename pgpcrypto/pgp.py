@@ -26,147 +26,85 @@ class PgpWrapper:
         self.gpg = gnupg.GPG(gpgbinary=gpgbinary, gnupghome=gnupghome)
 
         # Dictionary of key pairs, key is key_id
-        self._key_pairs = {}
+        self._key_id_by_recipient = {}
+        self._passphrase_by_key_id = {}
 
-    def import_key_pair(
-        self,
-        key_id: str = "",
-        passphrase: str = "",
-        public_key: str = "",
-        secret_key: str = "",
+        # The key id to be used for encryption when recipient not specified
+        self.default_recipient: str = ""
+
+    def import_public_key(
+        self, public_key: str, recipient: str, default: bool = False
     ) -> None:
-        """
-        Import a key pair along with the key ID and passphrase.
+        assert recipient and public_key
+        res = self.gpg.import_keys(public_key)
+        result = res.results[0]
+        if "ok" not in result:
+            raise ImportError(f"Unable to import public PGP key: {res.stderr}")
+        fingerprint = result["fingerprint"]
+        self.gpg.trust_keys(fingerprint, "TRUST_ULTIMATE")
+        if default or not self.default_recipient:
+            self.default_recipient = recipient
 
-        Each instance of PgpWrapper can only have 1 associated key id at a time.
-        When you encrypt, the key id and public key used will be the last one that
-        was imported.
+    def import_secret_key(self, secret_key: str, passphrase: str) -> None:
+        res = self.gpg.import_keys(secret_key)
+        result = res.results[0]
+        if "ok" not in result:
+            raise ImportError(f"Unable to import secret PGP key: {res.stderr}")
+        fingerprint = result["fingerprint"]
+        keyid = fingerprint[-16:]
+        self.gpg.trust_keys(fingerprint, "TRUST_ULTIMATE")
+        self._passphrase_by_key_id[fingerprint] = passphrase
+        self._passphrase_by_key_id[keyid] = passphrase
+        self._passphrase_by_key_id[keyid[-8:]] = passphrase
+        # Store the passphrase for the subkeys as well
+        key_list = self.gpg.list_keys(secret=True)
+        for k in key_list:
+            if k["keyid"] == keyid and "subkeys" in k:
+                for sk in k["subkeys"]:
+                    for v in sk:
+                        if isinstance(v, str) and len(v) >= 8:
+                            self._passphrase_by_key_id[v] = passphrase
+                            self._passphrase_by_key_id[v[-8:]] = passphrase
 
-        When you decrypt, however, any of the secret key and passphrase combos that
-        have been imported may be used.
-
-        Args:
-            key_id (str): The key ID associated with the PGP key.
-            passphrase (str): The passphrase to unlock the PGP key.
-            public_key (str): The ASCII armored public key.
-            secret_key (str): The ASCII armored secret key.
-        """
-
-        # import the keys
-        if key_id:
-            self.key_id = key_id
-        if passphrase:
-            self.passphrase = passphrase
-
-        # You can choose to only import a public key or a secret key
-        # Then you will only be able to encrypt or decrypt, respectively
-
-        if secret_key:
-            res = self.gpg.import_keys(secret_key)
-            result = res.results[0]
-            if "ok" not in result:
-                raise ImportError(f"Unable to import secret PGP key: {res.stderr}")
-            fingerprint = result["fingerprint"]
-            key_pair_data = self._key_pairs.get(fingerprint, {})
-            key_pair_data["secret_key"] = secret_key
-            if not passphrase:
-                raise ValueError("passphrase is required when importing a secret key")
-            key_pair_data["passphrase"] = passphrase
-            self._key_pairs[fingerprint] = key_pair_data
-
-        if public_key:
-            res = self.gpg.import_keys(secret_key)
-            result = res.results[0]
-            if "ok" not in result:
-                raise ImportError(f"Unable to import public PGP key: {res.stderr}")
-            self.gpg.trust_keys(res["key_id"], "TRUST_ULTIMATE")
-            fingerprint = result[0]
-            key_pair_data = self._key_pairs.get(fingerprint, {})
-
-    def get_keys(
-        self,
-    ) -> List[Any]:
-        """
-        Retrieves a list of PGP keys.
-
-        Returns:
-            List[Any]: A list of PGP keys.
-        """
+    def get_keys(self) -> List[Any]:
         return self.gpg.list_keys(secret=False) + self.gpg.list_keys(secret=True)
 
     def count_keys(self) -> int:
-        """
-        Counts the number of PGP keys.
-
-        Returns:
-            int: The number of PGP keys.
-        """
         return len(self.get_keys())
 
-    def import_key_file(self, ascii_key_file_path: str) -> Any:
-        """
-        Imports a PGP key from an ASCII armored key file.
-
-        Args:
-            ascii_key_file_path (str): The path to the ASCII armored key file.
-
-        Returns:
-            Any: The result of the key import operation.
-        """
-        with open(ascii_key_file_path, "r") as f:
-            content = f.read()
-        return self.import_keys(content)
-
-    def import_keys(self, ascii_key_data: str) -> dict:
-        """
-        Imports PGP keys from ASCII armored key data.
-
-        Args:
-            ascii_key_data (str): The ASCII armored key data.
-
-        Returns:
-            dict: The result of the key import operation.
-        """
-
-        res = self.gpg.import_keys(ascii_key_data)
-        if res.returncode != 0:
-            raise ImportError(f"Unable to import PGP key(s): {res.stderr}")
-        return {
-            "key_id": res.fingerprints[0],
-            "keys_found": res.count,
-            "pub_keys_imported": res.imported,
-            "sec_keys_imported": res.sec_imported,
-        }
-
-    def encrypt_file(self, file_path: str, output_file_path: str) -> None:
-        """
-        Encrypts a file using PGP.
-
-        Args:
-            file_path (str): The path to the file to encrypt.
-            output_file_path (str): The path to save the encrypted file.
-        """
+    def encrypt_file(
+        self, file_path: str, output_file_path: str, recipient: str = ""
+    ) -> Any:
         result = self.gpg.encrypt_file(
             file_path,
-            self.key_id,
+            recipient or self.default_recipient,
             armor=True,
             output=output_file_path,
         )
         if not result.ok:
             raise ValueError(f"Unable to encrypt file: {result.stderr}")
+        return result
 
     def decrypt_file(self, file_path: str, output_file_path: str) -> None:
-        """
-        Decrypts a file using PGP.
-
-        Args:
-            file_path (str): The path to the file to decrypt.
-            output_file_path (str): The path to save the decrypted file.
-        """
+        keyids = self.gpg.get_recipients_file(file_path)
+        if (
+            not keyids
+            or not keyids[0]
+            or not isinstance(keyids[0], str)
+            or not len(keyids[0]) >= 8
+        ):
+            raise ValueError(
+                f"Unable to decrypt file {file_path}, no recipient keyid found"
+            )
+        passphrase = self._passphrase_by_key_id.get(keyids[0], "")
+        if not passphrase:
+            raise ValueError(
+                f"Unable to decrypt file {file_path}, no passphrase for keyid {keyids}"
+            )
         result = self.gpg.decrypt_file(
             file_path,
             always_trust=True,
-            passphrase=self.passphrase,
+            passphrase=passphrase,
             output=output_file_path,
         )
         if not result.ok:

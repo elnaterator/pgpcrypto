@@ -1,0 +1,122 @@
+[
+    {
+        "type": "pub",
+        "trust": "u",
+        "length": "2048",
+        "algo": "1",
+        "keyid": "EC37905EDA2A0097",
+        "date": "1706136834",
+        "expires": "",
+        "dummy": "",
+        "ownertrust": "u",
+        "sig": "",
+        "cap": "scESC",
+        "issuer": "",
+        "flag": "unavailable",
+        "token": "unavailable",
+        "hash": "unavailable",
+        "curve": "unavailable",
+        "compliance": "unavailable",
+        "updated": "unavailable",
+        "origin": "unavailable",
+        "keygrip": "unavailable",
+        "uids": [
+            "Test User (Test PGP Key) <test.user@example.com>"
+        ],
+        "sigs": [],
+        "subkeys": [
+            [
+                "FAB533C075188ED1",
+                "e",
+                "DC5A9EC2CF6BAB9907A7C71FFAB533C075188ED1",
+                null
+            ]
+        ],
+        "fingerprint": "325C79D44776E29A2D85D07CEC37905EDA2A0097",
+        "subkey_info": {
+            "FAB533C075188ED1": {
+                "type": "sub",
+                "trust": "u",
+                "length": "2048",
+                "algo": "1",
+                "keyid": "FAB533C075188ED1",
+                "date": "1706136834",
+                "expires": "",
+                "dummy": "",
+                "ownertrust": "",
+                "uid": "",
+                "sig": "",
+                "cap": "e",
+                "issuer": "",
+                "flag": "unavailable",
+                "token": "unavailable",
+                "hash": "unavailable",
+                "curve": "unavailable",
+                "compliance": "unavailable",
+                "updated": "unavailable",
+                "origin": "unavailable",
+                "keygrip": "unavailable"
+            }
+        }
+    },
+    {
+        "type": "sec",
+        "trust": "",
+        "length": "2048",
+        "algo": "1",
+        "keyid": "EC37905EDA2A0097",
+        "date": "1706136834",
+        "expires": "",
+        "dummy": "",
+        "ownertrust": "",
+        "sig": "",
+        "cap": "",
+        "issuer": "",
+        "flag": "",
+        "token": "",
+        "hash": "",
+        "curve": "unavailable",
+        "compliance": "unavailable",
+        "updated": "unavailable",
+        "origin": "unavailable",
+        "keygrip": "unavailable",
+        "uids": [
+            "Test User (Test PGP Key) <test.user@example.com>"
+        ],
+        "sigs": [],
+        "subkeys": [
+            [
+                "FAB533C075188ED1",
+                null,
+                "DC5A9EC2CF6BAB9907A7C71FFAB533C075188ED1",
+                null
+            ]
+        ],
+        "fingerprint": "325C79D44776E29A2D85D07CEC37905EDA2A0097",
+        "subkey_info": {
+            "FAB533C075188ED1": {
+                "type": "ssb",
+                "trust": "",
+                "length": "2048",
+                "algo": "1",
+                "keyid": "FAB533C075188ED1",
+                "date": "1706136834",
+                "expires": "",
+                "dummy": "",
+                "ownertrust": "",
+                "uid": "",
+                "sig": "",
+                "cap": "",
+                "issuer": "",
+                "flag": "",
+                "token": "",
+                "hash": "",
+                "curve": "unavailable",
+                "compliance": "unavailable",
+                "updated": "unavailable",
+                "origin": "unavailable",
+                "keygrip": "unavailable"
+            }
+        }
+    }
+]

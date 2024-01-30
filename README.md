@@ -25,25 +25,24 @@ Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg, and update 
 *Note: you must have valid aws credentials and the aws cli installed to run many of these commands.*
 
 ```bash
-
-# Set environment variables for fetching the gpg binary (will look for object named "gpg" at this location)
-export GNUPG_S3_LOCATION="s3://mybucket/gnupg-python-lambda"
+# Set S3 vars of gpg binary if you have one already
+export GNUPG_S3_LOCATION="s3://mybucket/gnupg-python-lambda/gpg"
 export GNUPG_S3_KMS_KEY="arn:aws:kms:us-east-1:123456789012:key/123456"
 
-# Set environment variables for building the gpg binary from scratch on ec2
+# Set EC2 vars for building the gpg binary from source
 export GNUPG_EC2_HOST="10.10.111.222"
 export GNUPG_EC2_SSH_KEY="~/.ssh/id_rsa"
 
 # Build the project
 make build
 
-# Run all tests (local and in docker)
+# Run all tests (unittests and then run tests/lambda.py in docker container)
 make test
 
 # Deploy the lambda layer
-make deploy LAYER_NAME=my-lambda-layer
+make deploy LAYER=my-lambda-layer
 
-# Help for more options
+# More options
 make
 ```
 
@@ -54,46 +53,56 @@ Simplify the usage and setup for basic encryption / decryption of files.
 ```python
 from pgpcrypto import pgp
 
+# No arguments needed when using as a lambda layer (see below for other use cases)
 pgpw = pgp.PgpWrapper()
 
-pgpw.import_key_pair(
-    key_id: 'Test User', # recipient name or email, or keyid or fingerprint
-    passphrase: 'Passphrase12345',
+# Import a public key for encryption
+pgpw.import_public_key(
     public_key: open('test.pub.asc').read(),
-    secret_key: open('test.sec.asc').read(),
+    recipient: 'test.user@example.com', # Name, email, keyid, or fingerprint
 )
 
-pgpw.encrypt_file("file.txt", "encrypted_file.txt.pgp")
+# Encrypt files
+pgpw.encrypt_file("file.txt", "encrypted_file.pgp")
 
-pgpw.decrypt_file("encrypted_file.txt.pgp", "decrypted_file.txt")
+# Import a secret key for decryption
+pgpw.import_secret_key(
+    secret_key: open('test.sec.asc').read(),
+    passphrase: 'Passphrase12345',
+)
+
+# Decrypt files
+pgpw.decrypt_file("encrypted_file.pgp", "decrypted_file.txt")
 ```
 
-You can also import additional keys
-
-```python
-# Import 
-pgpw.import_key_pair('path/to/ascii_key.pem')
-
-# Import keys from a string
-ascii_str = open('path/to/ascii_keys.pem').read()
-pgpw.import_keys(ascii_str)
-
-# Fetch metadata on keys
-pgpw.count_keys()
-pgpw.get_keys()
-```
-
-The `gpg` binary comes bundled with the `lambda_layer.zip` file.  The default values for gpgbinary and gnupghome are for use as a lambda layer, but you can override them if using as a library in another location.
+The `gpg` binary comes bundled inside `dist/lambda_layer.zip` file.  The default values for gpgbinary and gnupghome are for use as a lambda layer, but you can override them if using as a library in another location.
 
 ```python
 pgpw = pgp.PgpWrapper(
-    key_id: 'Test User', # recipient name, recipient email, key id, or key fingerprint
-    passphrase: 'Passphrase12345',
-    public_key: open('test.pub.asc').read(),
-    secret_key: open('test.sec.asc').read(),
-    gpgbinary: '/opt/python/gpg', # showing default value
-    gnupghome: '/tmp/.gnupghome', # showing default value
+    gpgbinary = '/opt/python/gpg', # default value shown
+    gnupghome = '/tmp/.gnupghome', # default value shown
 )
+```
+
+You can add additional secret keys.
+
+```python
+# Import more secret keys
+pgpw.import_secret_key(
+    secret_key: open('another.sec.asc').read(),
+    passphrase: 'AnotherPassphrase12345',
+)
+
+# Decrypt using either key
+pgpw.decrypt_file("encrypted_file.pgp", "decrypted_file.txt")
+pgpw.decrypt_file("another_file.pgp", "another_file.txt")
+```
+
+Other things you can do
+
+```python
+# Fetch metadata on all keys in keystore
+pgpw.get_keys()
 ```
 
 If you need to do more than the wrapper library offers, you can access the underlying gpg instance from the `python-gnupg` library as well.
