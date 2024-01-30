@@ -39,11 +39,21 @@ make build
 # Run all tests (unittests and then run tests/lambda.py in docker container)
 make test
 
-# Deploy the lambda layer
+# Deploy to layer
 make deploy LAYER=my-lambda-layer
 
 # More options
 make
+```
+
+To publish you can do something like the following
+
+```bash
+# Deploy python library to pypi repo such as artifactory (must configure poetry with repo named my-artifactory)
+poetry publish --repository my-artifactory
+
+# Upload lambda layer zip file to central location
+curl -u YourUsername:YourPassword -T dist/lambda_layer.zip https://my-artifactory/artifactory/my-generic-repo/gnupg-python-lambda-layer/gnupg-python-lambda-layer-0.1.0.zip
 ```
 
 ## Usage
