@@ -124,3 +124,18 @@ If you need to do more than the wrapper library offers, you can access the under
 # Get the instance of gnupg.GPG() from the python-gnupg library
 pgpw.gpg.get_recipients(ascii_encrypted_message)
 ```
+
+## Metadata
+
+```discoveryhub
+region: NA
+bu: CIS
+artifacts: https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto/lambda_layer
+docs: https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python
+contacts:
+  technical: Hadzariga, Nathan <nathan.mhadzariga@experian.com>
+  product: Hadzariga, Nathan <nathan.mhadzariga@experian.com>
+links:
+  lambda_layer_artifactory: https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto/lambda_layer
+  pypi_lib_artifactory: https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto
+```
