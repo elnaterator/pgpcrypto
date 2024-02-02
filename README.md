@@ -203,12 +203,13 @@ make gpg-release
 ```discoveryhub
 region: NA
 bu: CIS
-artifacts: https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto/lambda_layer
+artifacts: https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto
 docs: https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python
 contacts:
   technical: Hadzariga, Nathan <nathan.mhadzariga@experian.com>
   product: Hadzariga, Nathan <nathan.mhadzariga@experian.com>
 links:
   lambda_layer_artifactory: https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto/lambda_layer
-  pypi_lib_artifactory: https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto
+  pypi_artifactory: https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto
+  gnupg_artifactory: https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto/gnupg-binary
 ```
