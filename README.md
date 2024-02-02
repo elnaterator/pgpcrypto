@@ -1,21 +1,22 @@
 # Python Library and Lambda Layer for PGP Encryption and Decryption
 
-This is a project to simplify PGP encryption and decryption for python lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available. This is intended for python3.X runtimes up to python3.11 (tested with `python3.11` only).
+Simplify common PGP encryption and decryption of files in Python3 / AWS / Amazon Linux environments, especially when a full-featured `gpg` executable is not available such the AWS Lambda python runtimes. Tested for AWS Lambda `python3.11` runtime, but should work in many other AWS environments such as AWS Glue, Fargate, EC2, AL2 Docker images, etc.
 
-* Python library with simple API for encryption and decryption of files.
-* Lambda layer package ready to deploy for python3.X runtimes.
-* Provides a GnuPG binary compatible with AWS lambda runtimes based on Amazon Linux 2 (build from source if different GnuPG version or OS needed)
-* Test lambda locally via docker image for `python3.11` lambda runtime environment.
-* Tools to release artifacts to artifactory
-* Tools to deploy to AWS lambda layer
+* Python package with simple API for encryption and decryption of files.
+* Lambda layer zip ready to deploy for python3.X runtimes.
+* Bundled GnuPG binary compatible with AWS lambda and tools to re-build from source.
+* Test via docker locally for `python3.11` lambda runtime.
+* CLI tools to release to artifactory.
+
+*Note: depends on the [python-gnupg](https://gnupg.readthedocs.io/en/latest/) library*
 
 ## Prerequisites
 
 * **Python 3.11**
 * **Poetry**
-* **Docker** for testing only
-* **AWS CLI** if you need to deploy to AWS lambda layer
-* **EC2 instance running Amazon Linux 2** if you need to build the GnuPG binary from source
+* **Docker** for testing locally
+* **AWS CLI** to deploy to AWS Lambda layer
+* **EC2 instance running Amazon Linux 2** to build GnuPG binary from source (optional)
 
 ## Quick Start
 
@@ -28,7 +29,7 @@ Build output is `dist/pgpcrypto-<version>-py3-none-any.whl` and `dist/lambda_lay
 make build
 
 # Run tests
-make test # run unit tests and then docker-based lambda tests
+make test # run unit tests and then local lambda test via docker
 make unittest # run unit tests only
 
 # More options
@@ -79,14 +80,14 @@ from pgpcrypto.pgp import PgpWrapper
 # Should use a temporary directory
 with TemporaryDirectory(dir="/tmp") as tmpdir:
 
-    # TODO Fetch your key data from secrets
-    pubkey = f"{tmpdir}/test.pub.asc"
-    seckey = f"{tmpdir}/test.sec.asc"
+    # TODO Fetch your key data (i.e. from secrets manager)
+    pubkey = open(f"{tmpdir}/test.pub.asc").read() # ascii armored public key
+    seckey = open(f"{tmpdir}/test.sec.asc").read() # ascii armored secret key
     recipient = 'test.user@example.com'
     passphrase = 'Passphrase12345'
 
     # TODO Fetch your input file
-    file_path = "{tmpdir}/file.txt"
+    file_path = f"{tmpdir}/file.txt"
 
     # Initialize the pgp wrapper
     pgpw = PgpWrapper(
@@ -96,30 +97,34 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
 
     # Import a public key for encryption
     pgpw.import_public_key(
-        public_key = open(pubkey).read(),
+        public_key = pubkey,
         recipient = recipient, # Name, email, keyid, or fingerprint
         default = True, # Optional, first key imported is default by default
     )
 
-    # Encrypt files (use the default key)
+    # Encrypt files (using the default key)
     pgpw.encrypt_file(file_path, f"{tmpdir}/encrypted_file.pgp")
 
     # Import a secret key for decryption
     pgpw.import_secret_key(
-        secret_key: open(seckey).read(),
-        passphrase: passphrase,
+        secret_key = seckey,
+        passphrase = passphrase,
     )
 
     # Decrypt files
     pgpw.decrypt_file(f"{tmpdir}/encrypted_file.pgp", f"{tmpdir}/decrypted_file.txt")
 
-    # Import additional secret keys, useful for key rotation
+    #
+    # Multiple key support
+    #
+
+    # Import additional secret keys (i.e. for key rotation)
     pgpw.import_secret_key(
-        secret_key: open(f"{tmpdir}/old.sec.asc").read(),
-        passphrase: 'OldPassphrase12345',
+        secret_key = open(f"{tmpdir}/previous.sec.asc").read(),
+        passphrase = 'PreviousPassphrase12345',
     )
 
-    # Decrypt using either key
+    # Decrypt using either key, keyid to use will be extracted from encrypted message
     pgpw.decrypt_file(f"{tmpdir}/new_encrypted_file.pgp", f"{tmpdir}/decrypted_file1.txt")
     pgpw.decrypt_file(f"{tmpdir}/old_encrypted_file.pgp", f"{tmpdir}/decrypted_file2.txt")
 
@@ -131,8 +136,8 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     )
 
     # Encrypt files for specific recipients
-    # Recipient is optional for test user's key, since it is the default key
-    pgpw.encrypt_file(file_path, f"{tmpdir}/for_fred.pgp", "fred@example.com")
+    # Note: recipient is optional for test user's key, since it is the default key
+    pgpw.encrypt_file(file_path, f"{tmpdir}/for_fred.pgp", "fred@example.com") # can be name, email, keyid, or fingerprint
     pgpw.encrypt_file(file_path, f"{tmpdir}/for_test_user.pgp", "test.user@example.com")
 
     #
@@ -140,10 +145,12 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     #
 
     # Fetch metadata on all keys in keystore
-    pgpw.get_keys()
+    keys = pgpw.get_keys()
+    print(keys) # [{'type': 'pub', ... },{'type': 'sec', ... }]
 
     # Get the instance of gnupg.GPG() from the python-gnupg library to do more things if needed
-    pgpw.gpg.get_recipients(ascii_encrypted_message)
+    keyids = pgpw.gpg.get_recipients(open(f"{tmpdir}/encrypted_file.pgp").read())
+    print(keyids) # ["75188ED1"]
 ```
 
 ## Release
