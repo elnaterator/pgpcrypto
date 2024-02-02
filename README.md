@@ -57,7 +57,7 @@ For other use cases (Glue, ECS, EC2, Lambda without a layer, etc.) you can downl
 
 ```bash
 # Download GnuPG binary and unzip
-VERSION="1.4.23-al2"
+VERSION="1.4.23-al2-x86_64"
 curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-$VERSION.zip
 unzip gnupg-bin.zip # contains `gpg` binary file, run "chmod +x ./gpg" to use
 
