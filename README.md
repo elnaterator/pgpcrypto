@@ -1,128 +1,194 @@
-# Library and Lambda Layer for PGP Encryption and Decryption
+# Python Library and Lambda Layer for PGP Encryption and Decryption
 
-This is a project to simplify PGP encryption and decryption for lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available. This is intended for python3.10 or python3.11 runtimes.
+This is a project to simplify PGP encryption and decryption for python lambda functions, and especially to solve the problem of not having a full-featured `gpg` executable available. This is intended for python3.X runtimes up to python3.11 (tested with `python3.11` only).
 
-* Library `pgpcrypto` with simple API for encryption and decryption of files.
-* Build a `gpg` binary from source for `Amazon Linux 2` and package with `lambda_layer.zip`.
-* Test in lambda docker image locally.
-* Deploy to lambda layer.
+* Python library with simple API for encryption and decryption of files.
+* Lambda layer package ready to deploy for python3.X runtimes.
+* Provides a GnuPG binary compatible with AWS lambda runtimes based on Amazon Linux 2 (build from source if different GnuPG version or OS needed)
+* Test lambda locally via docker image for `python3.11` lambda runtime environment.
+* Tools to release artifacts to artifactory
+* Tools to deploy to AWS lambda layer
 
 ## Prerequisites
 
-* To deploy lambda layers or store your pre-built gpg binary in s3:
-  * AWS CLI
-* To build the `gpg` binary from source:
-  * An EC2 instance with `Amazon Linux 2`.
+* **Python 3.11**
+* **Poetry**
+* **Docker** for testing only
+* **AWS CLI** if you need to deploy to AWS lambda layer
+* **EC2 instance running Amazon Linux 2** if you need to build the GnuPG binary from source
 
-## Build, Test, Deploy
+## Quick Start
 
-This will build the GnuPG binary from source for the Amazon Linux 2 environment, then package the binary up with the lambda layer.
+*Note: See [Python Development Environment Setup](https://pages.experian.local/display/MABP/Python+Development+Environment+Setup) to configure access to artifactory.*
 
-The build output is `dist/lambda_layer.zip`.
-
-Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg, and update `build_gpg.sh` file `GNUPG_TARBALL` var if you want a different version.  Note that the version was chosen because it builds successfully, newer versions do not have the right dependency library versions available for `Amazon Linux 2`.
-
-*Note: you must have valid aws credentials and the aws cli installed to run many of these commands.*
+Build output is `dist/pgpcrypto-<version>-py3-none-any.whl` and `dist/lambda_layer.zip`.  Note that this will fetch an existing GnuPG binary `gpg` from artifactory. See below if you want to build GnuPG from source.
 
 ```bash
-# Set S3 vars of gpg binary if you have one already
-export GNUPG_S3_LOCATION="s3://mybucket/gnupg-python-lambda/gpg"
-export GNUPG_S3_KMS_KEY="arn:aws:kms:us-east-1:123456789012:key/123456"
-
-# Set EC2 vars for building the gpg binary from source
-export GNUPG_EC2_HOST="10.10.111.222"
-export GNUPG_EC2_SSH_KEY="~/.ssh/id_rsa"
-
 # Build the project
 make build
 
-# Run all tests (unittests and then run tests/lambda.py in docker container)
-make test
-
-# Deploy to layer
-make deploy LAYER=my-lambda-layer
-
-# Release to experian artifactory
-make release-experian
+# Run tests
+make test # run unit tests and then docker-based lambda tests
+make unittest # run unit tests only
 
 # More options
 make
 ```
 
-To publish you can do something like the following
+## Install
+
+### Lambda Layer
+
+For a lambda function the quickest way is to create a layer from the lambda layer zip file, then add the layer to your function.
 
 ```bash
-# Deploy python library to pypi repo such as artifactory (must configure poetry with repo named my-artifactory)
-poetry publish --repository my-artifactory
-
-# Upload lambda layer zip file to central location
-curl -u YourUsername:YourPassword -T dist/lambda_layer.zip https://my-artifactory/artifactory/my-generic-repo/gnupg-python-lambda-layer/gnupg-python-lambda-layer-0.1.0.zip
+# Download lambda_layer.zip from artifactory
+VERSION="0.1.1"
+curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda_layer-pgpcrypto-$VERSION.zip
 ```
+
+* Deploy this zip file as a lambda layer (compatible architectures: `x86_64`, compatible runtimes: `python3.11`).
+* Create a lambda function (runtime: `python3.11`) and configure to use the layer.
+
+### Python library
+
+For other use cases (Glue, ECS, EC2, Lambda without a layer, etc.) you can download the GnuPG binary and add the pgpcrypto library to your project, then run in any Amazon Linux 2 based environment.
+
+```bash
+# Download GnuPG binary and unzip
+VERSION="1.4.23-al2"
+curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-$VERSION.zip
+unzip gnupg-bin.zip # contains `gpg` binary file, run "chmod +x ./gpg" to use
+
+# Poetry
+poetry source add artifactory https://artifacts.experian.local/artifactory/api/pypi/pypi/simple
+poetry add pgpcrypto
+
+# Pip
+pip install -i https://artifacts.experian.local/artifactory/api/pypi/pypi/simple pgpcrypto
+```
+
+For other runtimes you may also bring your own gpg binary or build from source (not tested, but should work).
 
 ## Usage
 
-Simplify the usage and setup for basic encryption / decryption of files.
-
 ```python
-from pgpcrypto import pgp
+from tempfile import TemporaryDirectory
+from pgpcrypto.pgp import PgpWrapper
 
-# No arguments needed when using as a lambda layer (see below for other use cases)
-pgpw = pgp.PgpWrapper()
+# Should use a temporary directory
+with TemporaryDirectory(dir="/tmp") as tmpdir:
 
-# Import a public key for encryption
-pgpw.import_public_key(
-    public_key: open('test.pub.asc').read(),
-    recipient: 'test.user@example.com', # Name, email, keyid, or fingerprint
-)
+    # TODO Fetch your key data from secrets
+    pubkey = f"{tmpdir}/test.pub.asc"
+    seckey = f"{tmpdir}/test.sec.asc"
+    recipient = 'test.user@example.com'
+    passphrase = 'Passphrase12345'
 
-# Encrypt files
-pgpw.encrypt_file("file.txt", "encrypted_file.pgp")
+    # TODO Fetch your input file
+    file_path = "{tmpdir}/file.txt"
 
-# Import a secret key for decryption
-pgpw.import_secret_key(
-    secret_key: open('test.sec.asc').read(),
-    passphrase: 'Passphrase12345',
-)
+    # Initialize the pgp wrapper
+    pgpw = PgpWrapper(
+      gnupghome = f"{tmpdir}/.gnupghome", # GnuPG stores keys here
+      gpgbinary = '/opt/python/gpg', # default value (shown) works for lambda layer
+    )
 
-# Decrypt files
-pgpw.decrypt_file("encrypted_file.pgp", "decrypted_file.txt")
+    # Import a public key for encryption
+    pgpw.import_public_key(
+        public_key = open(pubkey).read(),
+        recipient = recipient, # Name, email, keyid, or fingerprint
+        default = True, # Optional, first key imported is default by default
+    )
+
+    # Encrypt files (use the default key)
+    pgpw.encrypt_file(file_path, f"{tmpdir}/encrypted_file.pgp")
+
+    # Import a secret key for decryption
+    pgpw.import_secret_key(
+        secret_key: open(seckey).read(),
+        passphrase: passphrase,
+    )
+
+    # Decrypt files
+    pgpw.decrypt_file(f"{tmpdir}/encrypted_file.pgp", f"{tmpdir}/decrypted_file.txt")
+
+    # Import additional secret keys, useful for key rotation
+    pgpw.import_secret_key(
+        secret_key: open(f"{tmpdir}/old.sec.asc").read(),
+        passphrase: 'OldPassphrase12345',
+    )
+
+    # Decrypt using either key
+    pgpw.decrypt_file(f"{tmpdir}/new_encrypted_file.pgp", f"{tmpdir}/decrypted_file1.txt")
+    pgpw.decrypt_file(f"{tmpdir}/old_encrypted_file.pgp", f"{tmpdir}/decrypted_file2.txt")
+
+    # Import additional public keys
+    pgpw.import_public_key(
+        public_key: open(f"{tmpdir}/fred.pub.asc").read(),
+        recipient: "fred@example.com", # Name, email, keyid, or fingerprint
+        default: False, # Optional, subsequent keys are not default by default
+    )
+
+    # Encrypt files for specific recipients
+    # Recipient is optional for test user's key, since it is the default key
+    pgpw.encrypt_file(file_path, f"{tmpdir}/for_fred.pgp", "fred@example.com")
+    pgpw.encrypt_file(file_path, f"{tmpdir}/for_test_user.pgp", "test.user@example.com")
+
+    #
+    # Other things you can do
+    #
+
+    # Fetch metadata on all keys in keystore
+    pgpw.get_keys()
+
+    # Get the instance of gnupg.GPG() from the python-gnupg library to do more things if needed
+    pgpw.gpg.get_recipients(ascii_encrypted_message)
 ```
 
-The `gpg` binary comes bundled inside `dist/lambda_layer.zip` file.  The default values for gpgbinary and gnupghome are for use as a lambda layer, but you can override them if using as a library in another location.
+## Release
 
-```python
-pgpw = pgp.PgpWrapper(
-    gpgbinary = '/opt/python/gpg', # default value shown
-    gnupghome = '/tmp/.gnupghome', # default value shown
-)
+The release process pushes the python library to [pypi-local PyPI repo in Artifactory](https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto), and the lambda layer zip file to [batch-products-local Generic repo in Artifactory](https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto).
+
+```bash
+# Set creds for artifactory (must have permission to publish to repos)
+export ARTIFACTORY_USER="<lanid>"
+export ARTIFACTORY_PASSWORD="<artifactory-api-key>"
+
+# Release `pgpcrypto` and `lambda_layer.zip` to experian artifactory
+make release VERSION="0.1.1"
 ```
 
-You can add additional secret keys.
+This will
+* Update the project version
+* Build
+* Publish `pgpcrypto` python package to `pypi-local` repo in Experian Artifactory
+* Publish `lambda_layer.zip` to `batch-products-local` repo in Experian Artifactory
+* Tag the git repo with the version number
+* Push the tags to origin
 
-```python
-# Import more secret keys
-pgpw.import_secret_key(
-    secret_key: open('another.sec.asc').read(),
-    passphrase: 'AnotherPassphrase12345',
-)
+## Build and Release GnuPG Binary
 
-# Decrypt using either key
-pgpw.decrypt_file("encrypted_file.pgp", "decrypted_file.txt")
-pgpw.decrypt_file("another_file.pgp", "another_file.txt")
-```
+Build a GnuPG binary from source that works in a target OS, zip up the binary and publish to [batch-products-local Generic repo in Artifactory](https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto).  An EC2 instance running the target OS is required.
 
-Other things you can do
+Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of GnuPG, and update `scripts/build_gpg.sh` file, `GNUPG_TARBALL` var, to update the version.  Note that the version was chosen for compatibility with AWS Lambda, other versions may not work as expected.
 
-```python
-# Fetch metadata on all keys in keystore
-pgpw.get_keys()
-```
+The released zip file will be versioned like `gnupg-bin-$GNUPG_VERSION-$GNUPG_TARGET_OS.zip` for example `gnupg-bin-1.4.23-al2-x86_64.zip`.  The publish will fail if it this version already exists.
 
-If you need to do more than the wrapper library offers, you can access the underlying gpg instance from the `python-gnupg` library as well.
+```bash
+# Set EC2 vars for building the gpg binary from source
+export GNUPG_EC2_HOST="10.10.111.222"
+export GNUPG_EC2_SSH_KEY="~/.ssh/id_rsa"
 
-```python
-# Get the instance of gnupg.GPG() from the python-gnupg library
-pgpw.gpg.get_recipients(ascii_encrypted_message)
+# Optionally override the version of gnupg and target OS tag
+export GNUPG_VERSION="1.4.23" # determines gnupg source tarball to download, also used in released zip file version
+export GNUPG_TARGET_OS="al2-x86_64" # used in released zip file version, should indicate OS of ec2 instance used for build
+
+# Build the gpg binary on the EC2 instance specified
+make gpg-build
+
+# Release the updated version of the gpg binary
+make gpg-release
 ```
 
 ## Metadata

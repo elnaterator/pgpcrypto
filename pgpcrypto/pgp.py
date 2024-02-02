@@ -10,7 +10,7 @@ class PgpWrapper:
 
     def __init__(
         self,
-        gnupghome: str = "/tmp/.gnupghome",
+        gnupghome: str,  # required, should be a temporary directory
         gpgbinary: str = "/opt/python/gpg",
     ) -> None:
         """

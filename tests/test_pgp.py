@@ -7,7 +7,7 @@ import json
 from unittest.mock import patch
 
 
-class TestGpgWrapper(unittest.TestCase):
+class TestPgpWrapper(unittest.TestCase):
     def setUp(self) -> None:
         self.gnupghome = "./.gnupghome"
         self.tmpdatadir = "./data/tmp"

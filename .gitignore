@@ -1,5 +1,5 @@
 # Ignore downloaded files
-gnupg-*.tar.bz2
+gnupg-*
 gpg
 
 # poetry

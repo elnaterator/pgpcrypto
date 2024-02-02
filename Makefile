@@ -6,24 +6,25 @@ SERVICE_NAME = app
 # Build
 
 build: gpg ## Build pgpcrypto python library and lambda layer to dist/ directory
-	chmod +x scripts/build_layer.sh
-	./scripts/build_layer.sh
+	chmod +x scripts/build.sh && ./scripts/build.sh
 
-gpg: ## If no 'gpg' binary, try download from s3 or else build on EC2 then upload to s3
-	make gpg-pull || make gpg-build
-	make gpg-push
+gpg: ## If 'gpg' binary not found locally download from artifactory
+	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh fetch
 
-gpg-push: ## Upload gpg binary to s3 at $GNUPG_S3_LOCATION
-	chmod +x scripts/s3_gpg_cache.sh
-	./scripts/s3_gpg_cache.sh push
+gpg-build: ## Build gpg binary from source on EC2 instance
+	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh build
 
-gpg-pull: ## Force download of gpg binary from s3 at $GNUPG_S3_LOCATION
-	chmod +x scripts/s3_gpg_cache.sh
-	./scripts/s3_gpg_cache.sh pull
+# Release
 
-gpg-build: ## Build gpg binary from source EC2 instance
-	chmod +x scripts/build_gpg.sh
-	./scripts/build_gpg.sh build
+update-version: ## Update the version of pgpcrypto to VERSION
+	poetry version $(VERSION)
+
+release: update-version build ## Release a new version of pgpcrypto to experian artifactory with version VERSION
+	chmod +x scripts/release.sh && ./scripts/release.sh
+
+gpg-release: ## Release gpg binary to artifactory, use existing gpg binary if found locally, or else build
+	if [ ! -f "gpg" ]; then make gpg-build; fi
+	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh release
 
 # Docker
 	
@@ -35,7 +36,7 @@ stop: ## Stop docker container running lambda function
 
 invoke: ## Invoke the function test lambda function in docker container
 	@echo ""
-	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9000/2015-03-31/functions/function/invocations
+	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9000/2015-03-31/functions/function/invocations | jq
 	@echo "\n"
 
 # Test
@@ -50,12 +51,6 @@ test-lambda-docker: build start invoke stop ## Start lambda docker container, in
 
 bash: ## Run bash in lambda docker container
 	docker-compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
-
-# Release
-
-release-experian: ## Release a new version of pgpcrypto to experian artifactory
-	chmod +x scripts/release-experian.sh
-	./scripts/release-experian.sh
 
 deploy: ## Deploy to a lambda layer with name LAYER
 	aws lambda publish-layer-version \

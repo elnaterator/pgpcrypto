@@ -1,45 +1,72 @@
-import json
-import os
-import pgpcrypto.pgp as pgp
-import array
+from tempfile import TemporaryDirectory
+from pgpcrypto.pgp import PgpWrapper
 
 
 def lambda_handler(event, context):
     # Get the PGP input data
-    key_id = "Test User"
+    recipient = "Test User"
     passphrase = "Passphrase12345"
     with open("data/test.pub.asc", "r") as f:
-        public_key = f.read()
+        pubkey = f.read()
     with open("data/test.sec.asc", "r") as f:
-        secret_key = f.read()
+        seckey = f.read()
 
-    # Initialize the PGP wrapper
-    pgpw = pgp.PgpWrapper()
+    # Get input file path
+    file_path = "data/test.txt"
 
-    # Import the PGP keys
-    pgpw.import_public_key(public_key=public_key, recipient=key_id)
-    pgpw.import_secret_key(secret_key=secret_key, passphrase=passphrase)
+    # response object
+    response = {}
 
-    # Encrypt the file
-    pgpw.encrypt_file("data/test.txt", "data/test.txt.pgp")
+    # Should use a temporary directory
+    with TemporaryDirectory(dir="/tmp") as tmpdir:
+        # Initialize the pgp wrapper
+        pgpw = PgpWrapper(
+            gnupghome=f"{tmpdir}/.gnupghome",  # GnuPG stores keys here
+            gpgbinary="/opt/python/gpg",  # default value (shown) works for lambda layer
+        )
 
-    # Verify the encrypted file
-    with open("data/test.txt.pgp", "r") as f:
-        enc_content = f.read()
-    assert enc_content.startswith("-----BEGIN PGP MESSAGE-----")
+        # Import a public key for encryption
+        pgpw.import_public_key(
+            public_key=pubkey,
+            recipient=recipient,  # Name, email, keyid, or fingerprint
+            default=True,  # Optional, first key imported is default by default
+        )
 
-    # Decrypt the file
-    pgpw.decrypt_file("data/test.txt.pgp", "data/test.txt.dec")
+        # Encrypt files (use the default key)
+        pgpw.encrypt_file(file_path, f"{tmpdir}/encrypted_file.pgp")
 
-    # Verify the decrypted file
-    with open("data/test.txt.dec", "r") as f:
-        dec_content = f.read()
-    assert dec_content == "Hello World!"
+        # Verify the encrypted file
+        with open(f"{tmpdir}/encrypted_file.pgp", "r") as f:
+            enc_content = f.read()
+        assert enc_content.startswith("-----BEGIN PGP MESSAGE-----")
 
-    return {
-        "result": "SUCCESS",
-        "count_keys": pgpw.count_keys(),
-        "get_keys": pgpw.get_keys(),
-        "enc_content": enc_content,
-        "dec_content": dec_content,
-    }
+        # Import a secret key for decryption
+        pgpw.import_secret_key(
+            secret_key=seckey,
+            passphrase=passphrase,
+        )
+
+        # Decrypt files
+        pgpw.decrypt_file(
+            f"{tmpdir}/encrypted_file.pgp", f"{tmpdir}/decrypted_file.txt"
+        )
+
+        # Verify the decrypted file
+        with open(f"{tmpdir}/decrypted_file.txt", "r") as f:
+            dec_content = f.read()
+        assert dec_content == "Hello World!"
+
+        # Should get the key ids used to encrypt the message
+        message_keys = pgpw.gpg.get_recipients(enc_content)
+        assert message_keys == ["75188ED1"]
+
+        response = {
+            "result": "SUCCESS",
+            "encrypted_content": enc_content,
+            "decrypted_content": dec_content,
+            "message_keys": message_keys,
+            "count_keys": pgpw.count_keys(),
+            "get_keys": pgpw.get_keys(),
+        }
+
+    return response
