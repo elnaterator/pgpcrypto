@@ -5,42 +5,16 @@ Simplify common PGP encryption and decryption of files in Python3 / AWS / Amazon
 * Python package with simple API for encryption and decryption of files.
 * Lambda layer zip ready to deploy for python3.X runtimes.
 * Bundled GnuPG binary compatible with AWS lambda and tools to re-build from source.
-* Test via docker locally for `python3.11` lambda runtime.
+* Tested for `python3.11` lambda runtime.
 * CLI tools to release to artifactory.
 
 *Note: depends on the [python-gnupg](https://gnupg.readthedocs.io/en/latest/) library*
-
-## Prerequisites
-
-* **Python 3.11**
-* **Poetry**
-* **Docker** for testing locally
-* **AWS CLI** to deploy to AWS Lambda layer
-* **EC2 instance running Amazon Linux 2** to build GnuPG binary from source (optional)
-
-## Quick Start
-
-*Note: See [Python Development Environment Setup](https://pages.experian.local/display/MABP/Python+Development+Environment+Setup) to configure access to artifactory.*
-
-Build output is `dist/pgpcrypto-<version>-py3-none-any.whl` and `dist/lambda_layer.zip`.  Note that this will fetch an existing GnuPG binary `gpg` from artifactory. See below if you want to build GnuPG from source.
-
-```bash
-# Build the project
-make build
-
-# Run tests
-make test # run unit tests and then local lambda test via docker
-make unittest # run unit tests only
-
-# More options
-make
-```
 
 ## Install
 
 ### Lambda Layer
 
-For a lambda function the quickest way is to create a layer from the lambda layer zip file, then add the layer to your function.
+Download the lambda layer zip file and deploy, this is the easiest way to use for a lambda function.
 
 ```bash
 # Download lambda_layer.zip from artifactory
@@ -56,17 +30,18 @@ curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-prod
 For other use cases (Glue, ECS, EC2, Lambda without a layer, etc.) you can download the GnuPG binary and add the pgpcrypto library to your project, then run in any Amazon Linux 2 based environment.
 
 ```bash
-# Download GnuPG binary and unzip
-VERSION="1.4.23-al2-x86_64"
-curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-$VERSION.zip
-unzip gnupg-bin.zip # contains `gpg` binary file, run "chmod +x ./gpg" to use
-
 # Poetry
 poetry source add artifactory https://artifacts.experian.local/artifactory/api/pypi/pypi/simple
 poetry add pgpcrypto
 
 # Pip
 pip install -i https://artifacts.experian.local/artifactory/api/pypi/pypi/simple pgpcrypto
+
+# Download GnuPG binary and unzip
+VERSION="1.4.23-al2-x86_64"
+curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-$VERSION.zip
+unzip gnupg-bin.zip # contains `gpg` binary file
+chmod +x ./gpg
 ```
 
 For other runtimes you may also bring your own gpg binary or build from source (not tested, but should work).
@@ -153,6 +128,35 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     print(keyids) # ["75188ED1"]
 ```
 
+# Contributing
+
+## Prerequisites
+
+* **Python 3.11**
+* **Poetry**
+* **Docker** for testing locally
+* **AWS CLI** to deploy to AWS Lambda layer
+* **EC2 instance running Amazon Linux 2** to build GnuPG binary from source (optional)
+
+## Quick Start
+
+*Note: See [Python Development Environment Setup](https://pages.experian.local/display/MABP/Python+Development+Environment+Setup) to configure access to artifactory.*
+
+Build output is `dist/pgpcrypto-<version>-py3-none-any.whl` and `dist/lambda_layer.zip`.  Note that this will fetch an existing GnuPG binary `gpg` from artifactory. See below if you want to build GnuPG from source.
+
+```bash
+# Build the project
+make build
+
+# Run tests
+make test # run unit tests and then local lambda test via docker
+make unittest # run unit tests only
+
+# More options
+make
+```
+
+
 ## Release
 
 The release process pushes the python library to [pypi-local PyPI repo in Artifactory](https://artifacts.experian.local/ui/repos/tree/General/pypi-local/pgpcrypto), and the lambda layer zip file to [batch-products-local Generic repo in Artifactory](https://artifacts.experian.local/ui/repos/tree/General/batch-products-local/pgpcrypto).
@@ -173,6 +177,7 @@ This will
 * Publish `lambda_layer.zip` to `batch-products-local` repo in Experian Artifactory
 * Tag the git repo with the version number
 * Push the tags to origin
+
 
 ## Build and Release GnuPG Binary
 
