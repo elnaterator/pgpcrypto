@@ -29,10 +29,10 @@ gpg-release: ## Release gpg binary to artifactory, use existing gpg binary if fo
 # Docker
 	
 start: ## Start docker container running lambda function with pgpcrypto layer and tests/lambda.py
-	docker-compose -f $(COMPOSE_FILE) up -d $(SERVICE_NAME) --build
+	docker compose -f $(COMPOSE_FILE) up -d $(SERVICE_NAME) --build
 
 stop: ## Stop docker container running lambda function
-	docker-compose -f $(COMPOSE_FILE) down
+	docker compose -f $(COMPOSE_FILE) down
 
 invoke: ## Invoke the function test lambda function in docker container
 	@echo ""
@@ -50,7 +50,7 @@ unittest: ## Run unit tests locally
 test-lambda-docker: build start invoke stop ## Start lambda docker container, invoke test lambda function tests/lambda.py, and stop container
 
 bash: ## Run bash in lambda docker container
-	docker-compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
+	docker compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
 
 deploy: ## Deploy to a lambda layer with name LAYER
 	aws lambda publish-layer-version \
