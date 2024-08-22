@@ -17,7 +17,7 @@ gpg-build: ## Build gpg binary from source on EC2 instance
 # Release
 
 update-version: ## Update the version of pgpcrypto to VERSION
-	poetry version $(VERSION)
+	chmod +x scripts/update_version.sh && ./scripts/update_version.sh $(VERSION)
 
 release: update-version build ## Release a new version of pgpcrypto to experian artifactory with version VERSION
 	chmod +x scripts/release.sh && ./scripts/release.sh
