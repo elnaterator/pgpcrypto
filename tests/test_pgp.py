@@ -61,6 +61,47 @@ class TestPgpWrapper(unittest.TestCase):
             content = f.read()
         assert content == "Hello World!"
 
+    def test_encrypt_decrypt_file_default_recipient(self):
+        s = get_pgp_secrets()
+
+        # import keys
+        pgpw = pgp.PgpWrapper(
+            gnupghome=self.gnupghome,
+            gpgbinary="gpg",
+        )
+        pgpw.import_public_key(
+            public_key=s["public_key"],
+            # no recipient specified, should use default
+        )
+        pgpw.import_secret_key(
+            secret_key=s["secret_key"],
+            passphrase=s["passphrase"],
+        )
+
+        # set paths to test files
+        orig_path = os.path.join("data", "test.txt")
+        enc_path = os.path.join(self.tmpdatadir, "test.txt.asc")
+        dec_path = os.path.join(self.tmpdatadir, "test.dec.txt")
+
+        # encrypt
+        pgpw.encrypt_file(orig_path, enc_path)
+
+        # ensure encryption succeeded
+        assert os.path.isfile(enc_path)
+        with open(enc_path, "r") as f:
+            content = f.read()
+        assert content.startswith("-----BEGIN PGP MESSAGE-----")
+        assert content.endswith("-----END PGP MESSAGE-----\n")
+
+        # decrypt
+        pgpw.decrypt_file(enc_path, dec_path)
+
+        # ensure decryption succeeded
+        assert os.path.isfile(dec_path)
+        with open(dec_path, "r") as f:
+            content = f.read()
+        assert content == "Hello World!"
+
     def test_encrypt_failure_bad_key_id(self):
         s = get_pgp_secrets()
         pgpw = pgp.PgpWrapper(

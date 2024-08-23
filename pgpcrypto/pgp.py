@@ -33,14 +33,16 @@ class PgpWrapper:
         self.default_recipient: str = ""
 
     def import_public_key(
-        self, public_key: str, recipient: str, default: bool = False
+        self, public_key: str, recipient: str = None, default: bool = False
     ) -> None:
-        assert recipient and public_key
+        assert public_key
         res = self.gpg.import_keys(public_key)
         result = res.results[0]
         if "ok" not in result:
             raise ImportError(f"Unable to import public PGP key: {res.stderr}")
         fingerprint = result["fingerprint"]
+        if not recipient:
+            recipient = fingerprint
         self.gpg.trust_keys(fingerprint, "TRUST_ULTIMATE")
         if default or not self.default_recipient:
             self.default_recipient = recipient
