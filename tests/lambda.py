@@ -26,7 +26,7 @@ def lambda_handler(event, context):
         )
 
         # Import a public key for encryption
-        pgpw.import_public_key(
+        pubkey_ids = pgpw.import_public_key(
             public_key=pubkey,
             recipient=recipient,  # Name, email, keyid, or fingerprint
             default=True,  # Optional, first key imported is default by default
@@ -41,7 +41,7 @@ def lambda_handler(event, context):
         assert enc_content.startswith("-----BEGIN PGP MESSAGE-----")
 
         # Import a secret key for decryption
-        pgpw.import_secret_key(
+        seckey_ids = pgpw.import_secret_key(
             secret_key=seckey,
             passphrase=passphrase,
         )
@@ -62,6 +62,8 @@ def lambda_handler(event, context):
 
         response = {
             "result": "SUCCESS",
+            "pubkey_ids": pubkey_ids,
+            "seckey_ids": seckey_ids,
             "encrypted_content": enc_content,
             "decrypted_content": dec_content,
             "message_keys": message_keys,
