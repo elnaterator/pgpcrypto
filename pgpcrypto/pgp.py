@@ -34,7 +34,7 @@ class PgpWrapper:
 
     def import_public_key(
         self, public_key: str, recipient: str = None, default: bool = False
-    ) -> None:
+    ) -> list[str]:
         assert public_key
         res = self.gpg.import_keys(public_key)
         result = res.results[0]
@@ -46,8 +46,25 @@ class PgpWrapper:
         self.gpg.trust_keys(fingerprint, "TRUST_ULTIMATE")
         if default or not self.default_recipient:
             self.default_recipient = recipient
+        return self._get_all_keyids(fingerprint)
 
-    def import_secret_key(self, secret_key: str, passphrase: str) -> None:
+    def _get_all_keyids(self, fingerprint: str) -> str:
+        keyids = [fingerprint, fingerprint[-16:], fingerprint[-8:]]
+        return keyids + self._get_all_subkeys(keyids)
+
+    def _get_all_subkeys(self, keyids: list[str]) -> list[str]:
+        key_list = self.get_keys()
+        subkey_set = set()
+        for k in key_list:
+            if k["keyid"] in keyids and "subkeys" in k:
+                for sk in k["subkeys"]:
+                    for v in sk:
+                        if isinstance(v, str) and len(v) >= 8:
+                            subkey_set.add(v)
+                            subkey_set.add(v[-8:])
+        return list(subkey_set)
+
+    def import_secret_key(self, secret_key: str, passphrase: str) -> list[str]:
         res = self.gpg.import_keys(secret_key)
         result = res.results[0]
         if "ok" not in result:
@@ -55,18 +72,10 @@ class PgpWrapper:
         fingerprint = result["fingerprint"]
         keyid = fingerprint[-16:]
         self.gpg.trust_keys(fingerprint, "TRUST_ULTIMATE")
-        self._passphrase_by_key_id[fingerprint] = passphrase
-        self._passphrase_by_key_id[keyid] = passphrase
-        self._passphrase_by_key_id[keyid[-8:]] = passphrase
-        # Store the passphrase for the subkeys as well
-        key_list = self.gpg.list_keys(secret=True)
-        for k in key_list:
-            if k["keyid"] == keyid and "subkeys" in k:
-                for sk in k["subkeys"]:
-                    for v in sk:
-                        if isinstance(v, str) and len(v) >= 8:
-                            self._passphrase_by_key_id[v] = passphrase
-                            self._passphrase_by_key_id[v[-8:]] = passphrase
+        keyids = self._get_all_keyids(fingerprint)
+        for k in keyids:
+            self._passphrase_by_key_id[k] = passphrase
+        return keyids
 
     def get_keys(self) -> List[Any]:
         return self.gpg.list_keys(secret=False) + self.gpg.list_keys(secret=True)

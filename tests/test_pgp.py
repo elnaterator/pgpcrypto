@@ -153,6 +153,35 @@ class TestPgpWrapper(unittest.TestCase):
         # ensure error message is correct
         assert "Unable to decrypt file" in str(cm.exception)
 
+    def test_import_returns_all_keyids(self):
+        s = get_pgp_secrets()
+
+        # import keys
+        pgpw = pgp.PgpWrapper(
+            gnupghome=self.gnupghome,
+            gpgbinary="gpg",
+        )
+        pub_keyids = pgpw.import_public_key(
+            public_key=s["public_key"],
+            # no recipient specified, should use default
+        )
+        sec_keyids = pgpw.import_secret_key(
+            secret_key=s["secret_key"],
+            passphrase=s["passphrase"],
+        )
+        self.assertEqual(pub_keyids, sec_keyids)
+        self.assertEqual(len(pub_keyids), 8)
+        # primary
+        self.assertIn("325C79D44776E29A2D85D07CEC37905EDA2A0097", pub_keyids)
+        self.assertIn("EC37905EDA2A0097", pub_keyids)
+        self.assertIn("DA2A0097", pub_keyids)
+        # subkeys
+        self.assertIn("75188ED1", pub_keyids)
+        self.assertIn("62BE56A6", pub_keyids)
+        self.assertIn("A97ADB9FA188E6DCF070F4B5D4268CB962BE56A6", pub_keyids)
+        self.assertIn("FAB533C075188ED1", pub_keyids)
+        self.assertIn("DC5A9EC2CF6BAB9907A7C71FFAB533C075188ED1", pub_keyids)
+
 
 def print_keys(pgpw: pgp.PgpWrapper) -> None:
     keys = pgpw.get_keys()
