@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
 #
-# Build the gnupg binary for Amazon Linux 2 from source. Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for latest versions of gnupg.
+# Build the gnupg binary for Amazon Linux 2 and Amazon Linux 2023 from source.
+# Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for latest versions of gnupg.
 #
 # Run ./build_gpg.sh for usage info
 #
 
 # Overridable environment vars
 GNUPG_VERSION="${GNUPG_VERSION:-1.4.23}"
-GNUPG_TARGET_OS="${GNUPG_TARGET_OS:-al2-x86_64}"
 
 # Tarball location
 GNUPG_TARBALL="gnupg-$GNUPG_VERSION.tar.bz2"
@@ -16,66 +16,22 @@ GNUPG_TARBALL="gnupg-$GNUPG_VERSION.tar.bz2"
 # Print usage info
 print_help() {
     echo ""
-    echo "Build the GnuPG binary (gpg) from source for a target OS. See https://www.gnupg.org/ftp/gcrypt/gnupg/ for versions of gnupg."
-    echo "This will connect to a remote EC2 instance to build the gpg binary, for use in a lambda function this should be Amazon Linux 2 or Amazon Linux 2023"
+    echo "Build the GnuPG binary (gpg) from source for Amazon Linux 2 and Amazon Linux 2023."
+    echo "For use in a lambda function, the binary is built in Docker containers."
     echo "Note that it is recommended you use the default version of gnupg, others have not been tested."
     echo ""
     echo "Configure with environment variables:"
-    echo "  export USE_DOCKER=\"true\"                           Set to true to build using Docker instead of EC2 (optional, default is false)"
-    echo "  export GNUPG_EC2_HOST=\"10.10.10.10\"               EC2 host to build the gpg binary on (required for EC2 build)"
-    echo "  export GNUPG_EC2_SSH_KEY=\"~/.ssh/yourkey.pem\"     SSH key to use to connect to the EC2 host (required for EC2 build)"
     echo "  export GNUPG_VERSION=\"1.4.23\"                     Filename of gnupg tarball to use (optional, current/default value is $GNUPG_VERSION)"
-    echo "  export GNUPG_TARGET_OS=\"al2-x86_64\"               Target OS to build the gpg binary for (optional, current/default value is $GNUPG_TARGET_OS)"
     echo ""
     echo "Commands:"
-    echo "  ./build_gpg.sh build        Build on a remote EC2 instance specified by env vars"
-    echo "  ./build_gpg.sh build_ec2    Build gpg binary (if you are already on target EC2 instance)"
-    echo "  ./build_gpg.sh build_docker Build gpg binary inside a Docker container"
+    echo "  ./build_gpg.sh build        Build GnuPG binaries using Docker"
+    echo "  ./build_gpg.sh build_docker Build gpg binary inside a Docker container (used internally)"
     echo "  ./build_gpg.sh release      Release the gpg binary to artifactory"
     echo ""
 }
 
-# Build the gpg binary (this part runs locally, connects to ec2 instance to build)
+# Build the gpg binary using Docker
 build() {
-    # Check if we should use Docker or EC2
-    if [[ "${USE_DOCKER:-true}" == "true" ]]; then
-        build_with_docker
-    else
-        build_with_ec2
-    fi
-}
-
-# Build using EC2 instance
-build_with_ec2() {
-    if [[ -z "${GNUPG_EC2_HOST}" || -z "${GNUPG_EC2_SSH_KEY}" ]]; then
-        echo -e "\nError: missing environment vars: GNUPG_EC2_HOST, GNUPG_EC2_SSH_KEY"
-        print_help
-        exit 1
-    fi
-
-    # Get script dir
-    SCRIPT_DIR=$(dirname "$0")
-
-    # Download tarball if it doesn't exist
-    if [ ! -f "$GNUPG_TARBALL" ]; then
-        echo "Download tarball: $GNUPG_TARBALL..."
-        wget https://www.gnupg.org/ftp/gcrypt/gnupg/$GNUPG_TARBALL
-    else
-        echo "Found existing tarball: $GNUPG_TARBALL. Delete it if you want to download again."
-    fi
-
-    echo "Copy tarball and build script to ec2 instance: $GNUPG_TARBALL, $SCRIPT_DIR/build_gpg.sh -> $GNUPG_EC2_HOST:/home/ec2-user/"
-    scp -i $GNUPG_EC2_SSH_KEY $GNUPG_TARBALL $SCRIPT_DIR/build_gpg.sh ec2-user@$GNUPG_EC2_HOST:/home/ec2-user/
-
-    echo "Run build on ec2 instance: $GNUPG_EC2_HOST..."
-    ssh -i $GNUPG_EC2_SSH_KEY ec2-user@$GNUPG_EC2_HOST "chmod +x build_gpg.sh && ./build_gpg.sh build_ec2"
-
-    echo "Fetch gpg binary from ec2 instance: $GNUPG_EC2_HOST -> ./gpg"
-    scp -i $GNUPG_EC2_SSH_KEY ec2-user@$GNUPG_EC2_HOST:/home/ec2-user/gpg ./gpg
-}
-
-# Build using Docker containers
-build_with_docker() {
     # Get script dir and project root
     SCRIPT_DIR=$(dirname "$0")
     PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
@@ -150,36 +106,6 @@ build_with_docker() {
 
     echo "Build complete! Binaries are available in ${OUTPUT_DIR}/"
     ls -la "${OUTPUT_DIR}/"
-}
-
-# Build the gpg binary (this part runs on ec2 instance)
-build_ec2() {
-
-    # Install dependencies
-    sudo yum -y groupinstall "Development Tools"
-    sudo yum -y install openssl-devel bzip2-devel libffi-devel libgpg-error libgcrypt libassuan libksba npth
-
-    # Create clean working dir and clean previous gpg build
-    HOMEDIR="/home/ec2-user"
-    WORKDIR="$HOMEDIR/gnupg-build"
-    rm -rf $WORKDIR
-    mkdir -p $WORKDIR
-    rm -f $HOMEDIR/gpg
-    cd $WORKDIR
-
-    # Move the tarball to the working dir
-    mv /home/ec2-user/$GNUPG_TARBALL $WORKDIR/
-
-    # Extract the tarball and build gnupg
-    tar -xjf $GNUPG_TARBALL
-    GNUPG_DIRNAME=$(tar -tf $GNUPG_TARBALL | head -1 | cut -f1 -d"/")
-    cd $WORKDIR/$GNUPG_DIRNAME
-    /bin/bash $WORKDIR/$GNUPG_DIRNAME/configure
-    make CLFAGS='-static'
-
-    # Copy the gpg binary to the home dir
-    cp $WORKDIR/$GNUPG_DIRNAME/g10/gpg $HOMEDIR/
-
 }
 
 # Build the gpg binary (this part runs inside docker container)
@@ -260,48 +186,103 @@ build_docker() {
     echo "GnuPG binary built and packaged: $ZIP_FILE"
 }
 
-# Release the gpg binary to artifactory
+# Release the gpg binaries to artifactory
 release() {
-
     if [[ -z "$ARTIFACTORY_USER" || -z "$ARTIFACTORY_PASSWORD" ]]; then
         echo "Unable to publish to experian artifactory, ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD env vars are not set"
         exit 1
     fi
 
-    # Build zip file name with version
-    ZIP_FILE="gnupg-bin-$GNUPG_VERSION-$GNUPG_TARGET_OS.zip"
-
-    echo "Are you sure you want to publish $ZIP_FILE to experian artifactory? (y/n)"
+    # Get script dir and project root
+    SCRIPT_DIR=$(dirname "$0")
+    PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+    OUTPUT_DIR="${PROJECT_ROOT}/dist/gnupg"
+    
+    # Check if output directory exists
+    if [ ! -d "$OUTPUT_DIR" ]; then
+        echo "Error: Output directory $OUTPUT_DIR not found. Run build first."
+        exit 1
+    fi
+    
+    # Check for zip files
+    ZIP_FILES=("$OUTPUT_DIR"/gnupg-bin-*.zip)
+    if [ ${#ZIP_FILES[@]} -eq 0 ] || [ ! -f "${ZIP_FILES[0]}" ]; then
+        echo "Error: No zip files found in $OUTPUT_DIR. Run build first."
+        exit 1
+    fi
+    
+    echo "Found the following files to publish:"
+    for file in "${ZIP_FILES[@]}"; do
+        echo "  $(basename "$file")"
+    done
+    
+    echo "Are you sure you want to publish these files to experian artifactory? (y/n)"
     read -r response
     if [[ "$response" != "y" ]]; then
         echo "Aborting publish"
         exit 1
     fi
 
-    # Zip up gpg binary
-    echo "Creating zip file: $ZIP_FILE..."
-    zip -r $ZIP_FILE ./gpg
-
-    echo "Publishing gpg binary to experian artifactory batch-products-local repository..."
-    curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -T $ZIP_FILE \
-        https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/$ZIP_FILE
-
+    # Publish each zip file
+    for file in "${ZIP_FILES[@]}"; do
+        filename=$(basename "$file")
+        echo "Publishing $filename to experian artifactory batch-products-local repository..."
+        curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -T "$file" \
+            "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/$filename"
+        
+        if [ $? -eq 0 ]; then
+            echo "Successfully published $filename"
+        else
+            echo "Failed to publish $filename"
+        fi
+    done
+    
+    echo "All files published successfully!"
 }
 
-# Fetch the zip file from artifactory
+# Fetch the gpg binaries from artifactory
 fetch() {
-    ZIP_FILE="gnupg-bin-$GNUPG_VERSION-$GNUPG_TARGET_OS.zip"
-    echo "Fetching $ZIP_FILE from artifactory..."
-    curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -O \
-        https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/$ZIP_FILE
-    unzip $ZIP_FILE
+    if [[ -z "$ARTIFACTORY_USER" || -z "$ARTIFACTORY_PASSWORD" ]]; then
+        echo "Unable to fetch from experian artifactory, ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD env vars are not set"
+        exit 1
+    fi
+
+    # Get script dir and project root
+    SCRIPT_DIR=$(dirname "$0")
+    PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+    OUTPUT_DIR="${PROJECT_ROOT}/dist/gnupg"
+    mkdir -p "$OUTPUT_DIR"
+    
+    # Define the binaries to fetch
+    AL2_ZIP="gnupg-bin-${GNUPG_VERSION}-al2-x86_64.zip"
+    AL2023_ZIP="gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip"
+    
+    # Fetch AL2 binary
+    echo "Fetching $AL2_ZIP from artifactory..."
+    curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
+        -o "${OUTPUT_DIR}/${AL2_ZIP}" \
+        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2_ZIP}"
+    
+    if [ $? -eq 0 ]; then
+        echo "Successfully downloaded $AL2_ZIP"
+    else
+        echo "Failed to download $AL2_ZIP"
+    fi
+    
+    # Fetch AL2023 binary
+    echo "Fetching $AL2023_ZIP from artifactory..."
+    curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
+        -o "${OUTPUT_DIR}/${AL2023_ZIP}" \
+        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2023_ZIP}" || \
+        echo "Note: $AL2023_ZIP not found or failed to download (this is optional)"
+    
+    echo "Fetch complete! Binaries are available in ${OUTPUT_DIR}/"
+    ls -la "${OUTPUT_DIR}/"
 }
 
 # Run the commands
 if [[ "$1" == "build" ]]; then
     build
-elif [[ "$1" == "build_ec2" ]]; then
-    build_ec2
 elif [[ "$1" == "build_docker" ]]; then
     build_docker
 elif [[ "$1" == "release" ]]; then
