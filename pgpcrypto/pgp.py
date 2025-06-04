@@ -33,7 +33,7 @@ class PgpWrapper:
         self.default_recipient: str = ""
 
     def import_public_key(
-        self, public_key: str, recipient: str = None, default: bool = False
+        self, public_key: str, recipient: str = "", default: bool = False
     ) -> list[str]:
         assert public_key
         res = self.gpg.import_keys(public_key)
@@ -48,7 +48,7 @@ class PgpWrapper:
             self.default_recipient = recipient
         return self._get_all_keyids(fingerprint)
 
-    def _get_all_keyids(self, fingerprint: str) -> str:
+    def _get_all_keyids(self, fingerprint: str) -> list[str]:
         keyids = [fingerprint, fingerprint[-16:], fingerprint[-8:]]
         return keyids + self._get_all_subkeys(keyids)
 
