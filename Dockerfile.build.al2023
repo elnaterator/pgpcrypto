@@ -1,0 +1,35 @@
+FROM amazonlinux:2023
+
+# Configure dnf for better network performance
+ENV PYTHONWARNINGS="ignore:Unverified HTTPS request"
+RUN echo "sslverify=false" >> /etc/dnf/dnf.conf && \
+    echo "timeout=300" >> /etc/dnf/dnf.conf && \
+    echo "retries=10" >> /etc/dnf/dnf.conf && \
+    echo "keepcache=1" >> /etc/dnf/dnf.conf
+
+# Install build dependencies - use a more complete set of packages
+RUN dnf -y install gcc gcc-c++ make tar gzip bzip2 bzip2-devel openssl-devel zip \
+    glibc-static zlib-static bzip2-static libstdc++-static \
+    autoconf automake libtool gettext-devel --setopt=sslverify=false
+
+# Add CFLAGS to work around multiple definition errors in newer GCC
+ENV CFLAGS="-fcommon"
+
+# Set working directory
+WORKDIR /build
+
+# Set environment variables
+ARG GNUPG_VERSION=1.4.23
+ARG GNUPG_TARGET_OS=al2023-x86_64
+ENV GNUPG_VERSION=${GNUPG_VERSION} \
+    GNUPG_TARGET_OS=${GNUPG_TARGET_OS} \
+    OUTPUT_DIR="/output"
+
+# Copy build script
+COPY scripts/build_gpg.sh /build/
+
+# Make script executable
+RUN chmod +x /build/build_gpg.sh
+
+# Run the build script when container starts
+ENTRYPOINT ["/build/build_gpg.sh", "build_docker"]

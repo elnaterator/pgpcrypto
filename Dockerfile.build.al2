@@ -1,0 +1,32 @@
+FROM amazonlinux:2
+
+# Configure yum for better network performance
+RUN echo "sslverify=false" >> /etc/yum.conf && \
+    echo "sslverify=false" >> /etc/yum/yum-transport-curl.conf && \
+    echo "timeout=300" >> /etc/yum.conf && \
+    echo "retries=10" >> /etc/yum.conf && \
+    echo "keepcache=1" >> /etc/yum.conf
+
+# Install build dependencies - use a more complete set of packages
+RUN yum -y install gcc gcc-c++ make tar gzip bzip2 bzip2-devel openssl-devel zip \
+    glibc-static zlib-static bzip2-static libstdc++-static \
+    autoconf automake libtool gettext-devel
+
+# Set working directory
+WORKDIR /build
+
+# Set environment variables
+ARG GNUPG_VERSION=1.4.23
+ARG GNUPG_TARGET_OS=al2-x86_64
+ENV GNUPG_VERSION=${GNUPG_VERSION} \
+    GNUPG_TARGET_OS=${GNUPG_TARGET_OS} \
+    OUTPUT_DIR="/output"
+
+# Copy build script
+COPY scripts/build_gpg.sh /build/
+
+# Make script executable
+RUN chmod +x /build/build_gpg.sh
+
+# Run the build script when container starts
+ENTRYPOINT ["/build/build_gpg.sh", "build_docker"]

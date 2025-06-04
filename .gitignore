@@ -1,6 +1,7 @@
 # Ignore downloaded files
 gnupg-*
 gpg
+temp
 
 # poetry
 .venv

@@ -5,10 +5,10 @@ SERVICE_NAME = app
 
 # Build
 
-build: gpg ## Build pgpcrypto python library and lambda layer to dist/ directory
+build: gpg-fetch ## Build pgpcrypto python library and lambda layer to dist/ directory
 	chmod +x scripts/build.sh && ./scripts/build.sh
 
-gpg: ## If 'gpg' binary not found locally download from artifactory
+gpg-fetch: ## If 'gpg' binary not found locally download from artifactory
 	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh fetch
 
 gpg-build: ## Build gpg binary from source on EC2 instance
