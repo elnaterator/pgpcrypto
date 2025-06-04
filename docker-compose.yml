@@ -1,10 +1,30 @@
 services:
-  app:
-    image: gnupg-python-lambda
+  python310:
+    image: gnupg-python-lambda:python3.10
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.test.py3.10
     volumes:
       - ~/.aws:/root/.aws
     ports:
       - 9000:8080
+
+  python311:
+    image: gnupg-python-lambda:python3.11
+    build:
+      context: .
+      dockerfile: Dockerfile.test.py3.11
+    volumes:
+      - ~/.aws:/root/.aws
+    ports:
+      - 9001:8080
+
+  python312:
+    image: gnupg-python-lambda:python3.12
+    build:
+      context: .
+      dockerfile: Dockerfile.test.py3.12
+    volumes:
+      - ~/.aws:/root/.aws
+    ports:
+      - 9002:8080

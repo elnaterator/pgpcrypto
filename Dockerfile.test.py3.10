@@ -1,0 +1,11 @@
+FROM public.ecr.aws/lambda/python:3.10
+
+COPY dist/python/ /opt/python/
+COPY tests/lambda.py /var/task/lambda.py
+COPY data/ /var/task/data/
+
+RUN chmod +x /opt/python/gpg
+
+ENV AWS_DEFAULT_REGION=us-east-1
+
+CMD ["lambda.lambda_handler"]

@@ -51,14 +51,22 @@ test-unit: ## Run unit tests locally
 test-lambda: lib-build layer-build test-lambda-docker-start test-lambda-invoke test-lambda-docker-stop ## Start lambda docker container, invoke test lambda function tests/lambda.py, and stop container
 
 test-lambda-docker-start: ## Start docker container running lambda function with pgpcrypto layer and tests/lambda.py
-	docker compose -f $(COMPOSE_FILE) up -d $(SERVICE_NAME) --build
+	docker compose -f $(COMPOSE_FILE) up -d --build
 
 test-lambda-docker-stop: ## Stop docker container running lambda function
 	docker compose -f $(COMPOSE_FILE) down
 
 test-lambda-invoke: ## Invoke the function test lambda function in docker container
 	@echo ""
+	@echo "------ Invoking Lambda Function for python3.10 runtime ------"
 	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9000/2015-03-31/functions/function/invocations | jq
+	@echo "\n------ Lambda test for python3.10 runtime complete ------"
+	@echo "\n------ Invoking Lambda Function for python3.11 runtime ------"
+	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9001/2015-03-31/functions/function/invocations | jq
+	@echo "\n------ Lambda test for python3.11 runtime complete ------"
+	@echo "\n------ Invoking Lambda Function for python3.12 runtime ------"
+	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9002/2015-03-31/functions/function/invocations | jq
+	@echo "\n------ Lambda test for python3.12 runtime complete ------"
 	@echo "\n"
 
 test-lambda-docker-bash: ## Run bash in lambda docker container
