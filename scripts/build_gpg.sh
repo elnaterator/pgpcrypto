@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# Build the gnupg binary for Amazon Linux 2 and Amazon Linux 2023 from source.
+# Build the gnupg binary for Amazon Linux 2 from source.
 # Check https://www.gnupg.org/ftp/gcrypt/gnupg/ for latest versions of gnupg.
 #
 # Run ./build_gpg.sh for usage info
@@ -9,6 +9,7 @@
 
 # Overridable environment vars
 GNUPG_VERSION="${GNUPG_VERSION:-1.4.23}"
+GNUPG_TARGET_OS="al2-x86_64"
 
 # Tarball location
 GNUPG_TARBALL="gnupg-$GNUPG_VERSION.tar.bz2"
@@ -16,7 +17,7 @@ GNUPG_TARBALL="gnupg-$GNUPG_VERSION.tar.bz2"
 # Print usage info
 print_help() {
     echo ""
-    echo "Build the GnuPG binary (gpg) from source for Amazon Linux 2 and Amazon Linux 2023."
+    echo "Build the GnuPG binary (gpg) from source for Amazon Linux 2."
     echo "For use in a lambda function, the binary is built in Docker containers."
     echo "Note that it is recommended you use the default version of gnupg, others have not been tested."
     echo ""
@@ -24,9 +25,10 @@ print_help() {
     echo "  export GNUPG_VERSION=\"1.4.23\"                     Filename of gnupg tarball to use (optional, current/default value is $GNUPG_VERSION)"
     echo ""
     echo "Commands:"
-    echo "  ./build_gpg.sh build        Build GnuPG binaries using Docker"
+    echo "  ./build_gpg.sh build        Build GnuPG binary using Docker"
     echo "  ./build_gpg.sh build_docker Build gpg binary inside a Docker container (used internally)"
     echo "  ./build_gpg.sh release      Release the gpg binary to artifactory"
+    echo "  ./build_gpg.sh fetch        Fetch the gpg binary from artifactory"
     echo ""
 }
 
@@ -50,73 +52,48 @@ build() {
         echo "Found existing tarball: ${TEMP_DIR}/${GNUPG_TARBALL}"
     fi
 
-    # Function to build for a specific OS
-    build_for_os() {
-        local os_name=$1
-        local os_tag=$2
-        local dockerfile=$3
-        local is_required=$4
-        
-        echo "Building GnuPG binary for ${os_name}..."
-        
-        # Try with network host mode and increased timeout
+    # Build for Amazon Linux 2
+    echo "Building GnuPG binary for Amazon Linux 2..."
+    
+    # Try with network host mode first (helps with corporate proxies)
+    DOCKER_BUILDKIT=1 docker build \
+        --network=host \
+        --build-arg GNUPG_VERSION=${GNUPG_VERSION} \
+        --build-arg GNUPG_TARGET_OS=${GNUPG_TARGET_OS} \
+        --progress=plain \
+        -t pgpcrypto-gnupg-al2 \
+        -f "${PROJECT_ROOT}/Dockerfile.build.al2" \
+        "${PROJECT_ROOT}" || {
+            
+        # If that fails, try with bridge network
+        echo "Retrying build with bridge network..."
         DOCKER_BUILDKIT=1 docker build \
-            --network=host \
+            --network=bridge \
             --build-arg GNUPG_VERSION=${GNUPG_VERSION} \
-            --build-arg GNUPG_TARGET_OS=${os_tag} \
+            --build-arg GNUPG_TARGET_OS=${GNUPG_TARGET_OS} \
             --progress=plain \
-            -t pgpcrypto-gnupg-${os_tag} \
-            -f "${PROJECT_ROOT}/${dockerfile}" \
-            "${PROJECT_ROOT}" || {
-                
-            # If that fails, try with bridge network and increased timeout
-            echo "Retrying ${os_name} build with bridge network..."
-            DOCKER_BUILDKIT=1 docker build \
-                --network=bridge \
-                --build-arg GNUPG_VERSION=${GNUPG_VERSION} \
-                --build-arg GNUPG_TARGET_OS=${os_tag} \
-                --progress=plain \
-                -t pgpcrypto-gnupg-${os_tag} \
-                -f "${PROJECT_ROOT}/${dockerfile}" \
-                "${PROJECT_ROOT}"
-        }
-        
-        if [ $? -eq 0 ]; then
-            docker run --rm \
-                -v "${OUTPUT_DIR}:/output" \
-                -v "${TEMP_DIR}/${GNUPG_TARBALL}:/build/${GNUPG_TARBALL}" \
-                pgpcrypto-gnupg-${os_tag}
-            return 0
-        else
-            if [ "$is_required" = "true" ]; then
-                echo "Error: Failed to build ${os_name} image"
-                return 1
-            else
-                echo "Warning: Failed to build ${os_name} image, skipping this build"
-                return 0
-            fi
-        fi
+            -t pgpcrypto-gnupg-al2 \
+            -f "${PROJECT_ROOT}/Dockerfile.build.al2" \
+            "${PROJECT_ROOT}"
     }
     
-    # Build for Amazon Linux 2
-    build_for_os "Amazon Linux 2" "al2-x86_64" "Dockerfile.build.al2" "true" || exit 1
-    
-    # Build for Amazon Linux 2023
-    build_for_os "Amazon Linux 2023" "al2023-x86_64" "Dockerfile.build.al2023" "false"
-
-    # Extract binaries to temp directories
-    mkdir -p "${TEMP_DIR}/al2"
-    mkdir -p "${TEMP_DIR}/al2023"
-    
-    echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
-    unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2-x86_64.zip" -d "${TEMP_DIR}/al2"
-    
-    if [ -f "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip" ]; then
-        echo "Extracting AL2023 binary to ${TEMP_DIR}/al2023/..."
-        unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip" -d "${TEMP_DIR}/al2023"
+    if [ $? -eq 0 ]; then
+        docker run --rm \
+            -v "${OUTPUT_DIR}:/output" \
+            -v "${TEMP_DIR}/${GNUPG_TARBALL}:/build/${GNUPG_TARBALL}" \
+            pgpcrypto-gnupg-al2
+    else
+        echo "Error: Failed to build Amazon Linux 2 image"
+        exit 1
     fi
 
-    echo "Build complete! Binaries are available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/"
+    # Extract binary to temp directory
+    mkdir -p "${TEMP_DIR}/al2"
+    
+    echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
+    unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-${GNUPG_TARGET_OS}.zip" -d "${TEMP_DIR}/al2"
+
+    echo "Build complete! Binary is available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/al2/"
     ls -la "${OUTPUT_DIR}/"
 }
 
@@ -166,14 +143,8 @@ build_docker() {
         exit 1
     }
     
-    # Check if we're on AL2023 and need the -fcommon flag
-    if [[ "$GNUPG_TARGET_OS" == *"al2023"* ]]; then
-        echo "Building GnuPG with -fcommon flag for AL2023..."
-        make CFLAGS="-fcommon"
-    else
-        echo "Building GnuPG..."
-        make
-    fi
+    echo "Building GnuPG..."
+    make
 
     # Check if build succeeded
     if [ ! -f "$WORKDIR/$GNUPG_DIRNAME/g10/gpg" ]; then
@@ -187,7 +158,7 @@ build_docker() {
     cp $WORKDIR/$GNUPG_DIRNAME/g10/gpg $WORKDIR/gpg
     
     # Check if the binary is statically linked
-    echo "Checking if binary is statically linked..."
+    echo "Checking binary information..."
     file $WORKDIR/gpg
     
     # Create zip file with version
@@ -198,7 +169,7 @@ build_docker() {
     echo "GnuPG binary built and packaged: $ZIP_FILE"
 }
 
-# Release the gpg binaries to artifactory
+# Release the gpg binary to artifactory
 release() {
     if [[ -z "$ARTIFACTORY_USER" || -z "$ARTIFACTORY_PASSWORD" ]]; then
         echo "Unable to publish to experian artifactory, ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD env vars are not set"
@@ -216,43 +187,36 @@ release() {
         exit 1
     fi
     
-    # Check for zip files
-    ZIP_FILES=("$OUTPUT_DIR"/gnupg-bin-*.zip)
-    if [ ${#ZIP_FILES[@]} -eq 0 ] || [ ! -f "${ZIP_FILES[0]}" ]; then
-        echo "Error: No zip files found in $OUTPUT_DIR. Run build first."
+    # Define the binary to release
+    ZIP_FILE="$OUTPUT_DIR/gnupg-bin-$GNUPG_VERSION-$GNUPG_TARGET_OS.zip"
+    
+    if [ ! -f "$ZIP_FILE" ]; then
+        echo "Error: Binary zip file not found: $ZIP_FILE"
+        echo "Run './scripts/build_gpg.sh build' first"
         exit 1
     fi
     
-    echo "Found the following files to publish:"
-    for file in "${ZIP_FILES[@]}"; do
-        echo "  $(basename "$file")"
-    done
-    
-    echo "Are you sure you want to publish these files to experian artifactory? (y/n)"
+    echo "Are you sure you want to publish $(basename $ZIP_FILE) to experian artifactory? (y/n)"
     read -r response
     if [[ "$response" != "y" ]]; then
         echo "Aborting publish"
         exit 1
     fi
 
-    # Publish each zip file
-    for file in "${ZIP_FILES[@]}"; do
-        filename=$(basename "$file")
-        echo "Publishing $filename to experian artifactory batch-products-local repository..."
-        curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -T "$file" \
-            "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/$filename"
-        
-        if [ $? -eq 0 ]; then
-            echo "Successfully published $filename"
-        else
-            echo "Failed to publish $filename"
-        fi
-    done
+    # Publish the zip file
+    echo "Publishing $(basename $ZIP_FILE) to experian artifactory batch-products-local repository..."
+    curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -T "$ZIP_FILE" \
+        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/$(basename $ZIP_FILE)"
     
-    echo "All files published successfully!"
+    if [ $? -eq 0 ]; then
+        echo "Successfully published $(basename $ZIP_FILE)"
+    else
+        echo "Failed to publish $(basename $ZIP_FILE)"
+        exit 1
+    fi
 }
 
-# Fetch the gpg binaries from artifactory
+# Fetch the gpg binary from artifactory
 fetch() {
     if [[ -z "$ARTIFACTORY_USER" || -z "$ARTIFACTORY_PASSWORD" ]]; then
         echo "Unable to fetch from experian artifactory, ARTIFACTORY_USERNAME and ARTIFACTORY_PASSWORD env vars are not set"
@@ -266,42 +230,26 @@ fetch() {
     TEMP_DIR="${PROJECT_ROOT}/temp"
     mkdir -p "$OUTPUT_DIR"
     mkdir -p "${TEMP_DIR}/al2"
-    mkdir -p "${TEMP_DIR}/al2023"
     
-    # Define the binaries to fetch
-    AL2_ZIP="gnupg-bin-${GNUPG_VERSION}-al2-x86_64.zip"
-    AL2023_ZIP="gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip"
+    # Define the binary to fetch
+    ZIP_FILE="gnupg-bin-${GNUPG_VERSION}-${GNUPG_TARGET_OS}.zip"
     
-    # Fetch AL2 binary
-    echo "Fetching $AL2_ZIP from artifactory..."
+    # Fetch binary
+    echo "Fetching $ZIP_FILE from artifactory..."
     curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
-        -o "${OUTPUT_DIR}/${AL2_ZIP}" \
-        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2_ZIP}"
+        -o "${OUTPUT_DIR}/${ZIP_FILE}" \
+        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${ZIP_FILE}"
     
     if [ $? -eq 0 ]; then
-        echo "Successfully downloaded $AL2_ZIP"
-        echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
-        unzip -o "${OUTPUT_DIR}/${AL2_ZIP}" -d "${TEMP_DIR}/al2"
+        echo "Successfully downloaded $ZIP_FILE"
+        echo "Extracting binary to ${TEMP_DIR}/al2/..."
+        unzip -o "${OUTPUT_DIR}/${ZIP_FILE}" -d "${TEMP_DIR}/al2"
     else
-        echo "Failed to download $AL2_ZIP"
+        echo "Failed to download $ZIP_FILE"
         exit 1
     fi
     
-    # Fetch AL2023 binary
-    echo "Fetching $AL2023_ZIP from artifactory..."
-    curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
-        -o "${OUTPUT_DIR}/${AL2023_ZIP}" \
-        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2023_ZIP}"
-    
-    if [ $? -eq 0 ]; then
-        echo "Successfully downloaded $AL2023_ZIP"
-        echo "Extracting AL2023 binary to ${TEMP_DIR}/al2023/..."
-        unzip -o "${OUTPUT_DIR}/${AL2023_ZIP}" -d "${TEMP_DIR}/al2023"
-    else
-        echo "Note: $AL2023_ZIP not found or failed to download (this is optional)"
-    fi
-    
-    echo "Fetch complete! Binaries are available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/"
+    echo "Fetch complete! Binary is available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/al2/"
     ls -la "${OUTPUT_DIR}/"
 }
 

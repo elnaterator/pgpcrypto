@@ -15,6 +15,7 @@ gpg-fetch: ## If 'gpg' binary not found locally download from artifactory
 	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh fetch
 
 layer-build: ## Build lambda layer zip to dist/ directory
+	if [ ! -f "temp/al2/gpg" ]; then make gpg-fetch; fi
 	chmod +x scripts/build_layer.sh && ./scripts/build_layer.sh
 
 # Release
