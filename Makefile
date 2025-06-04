@@ -5,38 +5,40 @@ SERVICE_NAME = app
 
 # Build
 
+clean: ## Clean up build artifacts
+	rm -rf dist/ temp/ .venv/ .pytest_cache/
+
+build: lib-build layer-build ## Build pgpcrypto python library and lambda layer zip
+
 lib-build: ## Build pgpcrypto python library
-	chmod +x scripts/build.sh && ./scripts/build.sh
-
-gpg-build: ## Build gpg binaries from source on Amazon Linux 2 and Amazon Linux 2023
-	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh build
-
-gpg-fetch: ## If 'gpg' binary not found locally download from artifactory
-	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh fetch
+	chmod +x scripts/build_lib.sh && ./scripts/build_lib.sh
 
 layer-build: ## Build lambda layer zip to dist/ directory
 	if [ ! -f "temp/al2/gpg" ]; then make gpg-fetch; fi
 	chmod +x scripts/build_layer.sh && ./scripts/build_layer.sh
 
+gpg-build: ## Build gpg binaries from source on Amazon Linux 2 (also works on AL2023)
+	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh build
+
+gpg-fetch: ## If 'gpg' binary not found locally download from artifactory
+	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh fetch
+
 # Release
+
+release: lib-release layer-release ## Release pgpcrypto library and lambda layer
 
 update-version: ## Update the version of pgpcrypto to VERSION
 	chmod +x scripts/update_version.sh && ./scripts/update_version.sh $(VERSION)
 
 lib-release: update-version lib-build ## Release a new version of pgpcrypto to experian artifactory with version VERSION
-	chmod +x scripts/release.sh && ./scripts/release.sh
+	chmod +x scripts/release_lib.sh && ./scripts/release_lib.sh
+
+layer-release: ## Release lambda layer to AWS Lambda with name LAYER
+	chmod +x scripts/release_layer.sh && ./scripts/release_layer.sh
 
 gpg-release: ## Release gpg binary to artifactory, use existing gpg binary if found locally, or else build
 	if [ ! -f "temp/al2/gpg" ]; then make gpg-build; fi
 	chmod +x scripts/build_gpg.sh && ./scripts/build_gpg.sh release
-
-layer-release: ## Release lambda layer to AWS Lambda with name LAYER
-	aws lambda publish-layer-version \
-		--layer-name $(LAYER) \
-		--zip-file fileb://dist/lambda_layer.zip \
-		--compatible-runtimes python3.10 python3.11 \
-		--compatible-architectures x86_64 \
-		| jq -r '.LayerVersionArn'
 
 # Test
 

@@ -10,7 +10,7 @@ fi
 VERSION=$(poetry version | awk '{print $2}')
 
 # Check if lambda layer exists
-LAYER_FILE="dist/lambda_layer.zip"
+LAYER_FILE="dist/lambda-layer-pgpcrypto-$VERSION.zip"
 if [ ! -f "$LAYER_FILE" ]; then
     echo "Lambda layer file not found: $LAYER_FILE"
     echo "Run 'make layer-build' first"
@@ -18,7 +18,7 @@ if [ ! -f "$LAYER_FILE" ]; then
 fi
 
 # Verify that the user wants to publish
-echo "Are you sure you want to publish lambda_layer-pgpcrypto-$VERSION.zip to experian artifactory? (y/n)"
+echo "Are you sure you want to publish $LAYER_FILE to experian artifactory? (y/n)"
 read -r response
 if [[ "$response" != "y" ]]; then
     echo "Aborting publish"
@@ -29,7 +29,7 @@ fi
 echo "Publishing lambda layer to experian artifactory batch-products-local repository..."
 curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
     -T "$LAYER_FILE" \
-    "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda_layer-pgpcrypto-$VERSION.zip"
+    "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/$LAYER_FILE"
 
 if [ $? -eq 0 ]; then
     echo "Successfully published lambda layer to artifactory"

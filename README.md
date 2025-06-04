@@ -18,7 +18,7 @@ Download the lambda layer zip file and deploy, this is the easiest way to use fo
 
 ```bash
 # Download lambda_layer.zip from artifactory
-VERSION="0.1.4"
+VERSION=""
 curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda_layer-pgpcrypto-$VERSION.zip
 ```
 
@@ -167,7 +167,7 @@ export ARTIFACTORY_USER="<lanid>"
 export ARTIFACTORY_PASSWORD="<artifactory-api-key>"
 
 # Release `pgpcrypto` and `lambda_layer.zip` to experian artifactory
-make release VERSION="0.1.4"
+make release VERSION=""
 ```
 
 This will

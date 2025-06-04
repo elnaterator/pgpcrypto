@@ -7,6 +7,7 @@ version=$(poetry version | awk '{print $2}')
 # Check for required files
 wheel_file="dist/pgpcrypto-$version-py3-none-any.whl"
 gpg_binary="temp/al2/gpg"
+layer_zip_file="lambda-layer-pgpcrypto-$version.zip"
 
 if [ ! -f "$wheel_file" ]; then
     echo "Error: Wheel file not found: $wheel_file"
@@ -49,6 +50,6 @@ ln -sf ../python/site-packages dist/python/lib/python3.12/site-packages
 # Create the Lambda layer zip
 echo "Creating Lambda layer zip..."
 cd dist
-zip -r lambda_layer.zip python
+zip -r $layer_zip_file python
 
-echo "Lambda layer created: dist/lambda_layer.zip"
+echo "Lambda layer created: dist/$layer_zip_file"

@@ -90,7 +90,7 @@ build() {
     # Extract binary to temp directory
     mkdir -p "${TEMP_DIR}/al2"
     
-    echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
+    echo "Extracting binary to ${TEMP_DIR}/al2/..."
     unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-${GNUPG_TARGET_OS}.zip" -d "${TEMP_DIR}/al2"
 
     echo "Build complete! Binary is available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/al2/"
@@ -226,31 +226,28 @@ fetch() {
     # Get script dir and project root
     SCRIPT_DIR=$(dirname "$0")
     PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
-    OUTPUT_DIR="${PROJECT_ROOT}/dist/gnupg"
     TEMP_DIR="${PROJECT_ROOT}/temp"
-    mkdir -p "$OUTPUT_DIR"
     mkdir -p "${TEMP_DIR}/al2"
     
     # Define the binary to fetch
     ZIP_FILE="gnupg-bin-${GNUPG_VERSION}-${GNUPG_TARGET_OS}.zip"
+    TEMP_ZIP="${TEMP_DIR}/${ZIP_FILE}"
     
-    # Fetch binary
-    echo "Fetching $ZIP_FILE from artifactory..."
+    # Fetch binary directly to temp directory
+    echo "Fetching $ZIP_FILE from artifactory to temp directory..."
     curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
-        -o "${OUTPUT_DIR}/${ZIP_FILE}" \
+        -o "${TEMP_ZIP}" \
         "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${ZIP_FILE}"
     
     if [ $? -eq 0 ]; then
-        echo "Successfully downloaded $ZIP_FILE"
+        echo "Successfully downloaded $ZIP_FILE to ${TEMP_DIR}"
         echo "Extracting binary to ${TEMP_DIR}/al2/..."
-        unzip -o "${OUTPUT_DIR}/${ZIP_FILE}" -d "${TEMP_DIR}/al2"
+        unzip -o "${TEMP_ZIP}" -d "${TEMP_DIR}/al2"
+        echo "Fetch complete! Binary extracted to ${TEMP_DIR}/al2/"
     else
         echo "Failed to download $ZIP_FILE"
         exit 1
     fi
-    
-    echo "Fetch complete! Binary is available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/al2/"
-    ls -la "${OUTPUT_DIR}/"
 }
 
 # Run the commands
