@@ -22,7 +22,7 @@ def lambda_handler(event, context):
         # Initialize the pgp wrapper
         pgpw = PgpWrapper(
             gnupghome=f"{tmpdir}/.gnupghome",  # GnuPG stores keys here
-            gpgbinary="/opt/python/gpg",  # default value (shown) works for lambda layer
+            gpgbinary="/opt/python/gpg_al2023",  # default value (shown) works for lambda layer
         )
 
         # Import a public key for encryption

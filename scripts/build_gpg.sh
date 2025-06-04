@@ -104,7 +104,19 @@ build() {
     # Build for Amazon Linux 2023
     build_for_os "Amazon Linux 2023" "al2023-x86_64" "Dockerfile.build.al2023" "false"
 
-    echo "Build complete! Binaries are available in ${OUTPUT_DIR}/"
+    # Extract binaries to temp directories
+    mkdir -p "${TEMP_DIR}/al2"
+    mkdir -p "${TEMP_DIR}/al2023"
+    
+    echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
+    unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2-x86_64.zip" -d "${TEMP_DIR}/al2"
+    
+    if [ -f "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip" ]; then
+        echo "Extracting AL2023 binary to ${TEMP_DIR}/al2023/..."
+        unzip -o "${OUTPUT_DIR}/gnupg-bin-${GNUPG_VERSION}-al2023-x86_64.zip" -d "${TEMP_DIR}/al2023"
+    fi
+
+    echo "Build complete! Binaries are available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/"
     ls -la "${OUTPUT_DIR}/"
 }
 
@@ -251,7 +263,10 @@ fetch() {
     SCRIPT_DIR=$(dirname "$0")
     PROJECT_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
     OUTPUT_DIR="${PROJECT_ROOT}/dist/gnupg"
+    TEMP_DIR="${PROJECT_ROOT}/temp"
     mkdir -p "$OUTPUT_DIR"
+    mkdir -p "${TEMP_DIR}/al2"
+    mkdir -p "${TEMP_DIR}/al2023"
     
     # Define the binaries to fetch
     AL2_ZIP="gnupg-bin-${GNUPG_VERSION}-al2-x86_64.zip"
@@ -265,18 +280,28 @@ fetch() {
     
     if [ $? -eq 0 ]; then
         echo "Successfully downloaded $AL2_ZIP"
+        echo "Extracting AL2 binary to ${TEMP_DIR}/al2/..."
+        unzip -o "${OUTPUT_DIR}/${AL2_ZIP}" -d "${TEMP_DIR}/al2"
     else
         echo "Failed to download $AL2_ZIP"
+        exit 1
     fi
     
     # Fetch AL2023 binary
     echo "Fetching $AL2023_ZIP from artifactory..."
     curl -f -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" \
         -o "${OUTPUT_DIR}/${AL2023_ZIP}" \
-        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2023_ZIP}" || \
-        echo "Note: $AL2023_ZIP not found or failed to download (this is optional)"
+        "https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/${AL2023_ZIP}"
     
-    echo "Fetch complete! Binaries are available in ${OUTPUT_DIR}/"
+    if [ $? -eq 0 ]; then
+        echo "Successfully downloaded $AL2023_ZIP"
+        echo "Extracting AL2023 binary to ${TEMP_DIR}/al2023/..."
+        unzip -o "${OUTPUT_DIR}/${AL2023_ZIP}" -d "${TEMP_DIR}/al2023"
+    else
+        echo "Note: $AL2023_ZIP not found or failed to download (this is optional)"
+    fi
+    
+    echo "Fetch complete! Binaries are available in ${OUTPUT_DIR}/ and extracted to ${TEMP_DIR}/"
     ls -la "${OUTPUT_DIR}/"
 }
 

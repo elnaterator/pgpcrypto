@@ -17,7 +17,7 @@ if git rev-parse "$VERSION" >/dev/null 2>&1; then
 fi
 
 # Verify that the user wants to publish
-echo "Are you sure you want to publish version $VERSION to experian artifactory? (y/n)"
+echo "Are you sure you want to publish pgpcrypto $VERSION to experian artifactory? (y/n)"
 read -r response
 if [[ "$response" != "y" ]]; then
     echo "Aborting publish"
@@ -29,11 +29,6 @@ echo "Publishing pgpcrypto $VERSION to experian artifactory pypi-local repositor
 poetry config repositories.experian-artifactory-local https://artifactory.experian.local/artifactory/api/pypi/pypi-local
 poetry config http-basic.experian-artifactory-local "$ARTIFACTORY_USER" "$ARTIFACTORY_PASSWORD"
 poetry publish -r experian-artifactory-local
-
-# Publish the lambda layer
-echo "Publishing lambda_layer-pgpcrypto-$VERSION.zip to experian artifactory batch-products-local repository..."
-curl -u "$ARTIFACTORY_USER:$ARTIFACTORY_PASSWORD" -T dist/lambda_layer.zip \
-    https://artifactory.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda_layer-pgpcrypto-$VERSION.zip
 
 # Commit if there are uncommitted changes
 if [[ -n $(git status -s) ]]; then
