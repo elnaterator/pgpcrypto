@@ -45,10 +45,11 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
         recipient="user@example.com",
         default=True  # Set as default key for encryption
         # When working with multiple keys you may set default=False and specify the recipient explicitly on encryption
+        # (See examples for more details)
     )
     
     # Encrypt a file
-    pgpw.encrypt_file("plaintext.txt", "encrypted.pgp")
+    pgpw.encrypt_file(f"{tmpdir}/plaintext.txt", f"{tmpdir}/encrypted.pgp")
     
     # Import secret key for decryption
     pgpw.import_secret_key(
@@ -57,7 +58,7 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     )
     
     # Decrypt the file
-    pgpw.decrypt_file("encrypted.pgp", "decrypted.txt")
+    pgpw.decrypt_file(f"{tmpdir}/encrypted.pgp", f"{tmpdir}/decrypted.txt")
     # When working with multiple keys, the correct key will be automatically selected based on the encrypted file's metadata
 
 ```
