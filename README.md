@@ -3,16 +3,19 @@
 PGPCrypto simplifies PGP encryption and decryption in Python applications running on AWS environments. It provides a clean API wrapper around GnuPG, bundled with a compatible binary for Amazon Linux environments. This makes it particularly valuable for serverless applications like AWS Lambda functions where installing system dependencies is challenging. The library supports key management, file encryption/decryption, and works across all Python 3.10+ Lambda runtimes.
 
 ## Table of Contents
-* [Usage](#usage-section)
-* [Installation](#installation-section)
-  * [Lambda Layer](#lambda-layer-section)
-  * [Python Library](#python-library-section)
-* [Contributing](#contributing-section)
-  * [Development Setup](#development-setup-section)
-  * [Building](#building-section)
-  * [Testing](#testing-section)
-  * [Releasing](#releasing-section)
-* [Metadata](#metadata-section)
+- [PGPCrypto: Python Library and Lambda Layer for PGP Encryption](#pgpcrypto-python-library-and-lambda-layer-for-pgp-encryption)
+  - [Table of Contents](#table-of-contents)
+  - [Usage](#usage)
+  - [Installation](#installation)
+    - [Lambda Layer](#lambda-layer)
+    - [Python Library](#python-library)
+  - [Contributing](#contributing)
+    - [Development Setup](#development-setup)
+    - [Building](#building)
+    - [Testing](#testing)
+    - [Releasing](#releasing)
+    - [Building GPG Binary](#building-gpg-binary)
+  - [Metadata](#metadata)
 
 <a name="usage-section"></a>
 ## Usage
@@ -85,15 +88,18 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
 <a name="python-library-section"></a>
 ### Python Library
 
-For other AWS environments (EC2, ECS, Glue, etc.):
+For other AWS environments (EC2, ECS, Glue, etc.), add the library to your Python project using one of the following methods, and ensure the GnuPG binary is available in your environment:
 
 ```bash
+# Using Pip
+pip install -i https://artifacts.experian.local/artifactory/api/pypi/pypi/simple pgpcrypto
+
+# Usinv uv
+uv add pgpcrypto --index-url https://artifacts.experian.local/artifactory/api/pypi/pypi/simple
+
 # Using Poetry
 poetry source add artifactory https://artifacts.experian.local/artifactory/api/pypi/pypi/simple
 poetry add pgpcrypto
-
-# Using Pip
-pip install -i https://artifacts.experian.local/artifactory/api/pypi/pypi/simple pgpcrypto
 
 # Download and extract the GnuPG binary
 curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-1.4.23-al2-x86_64.zip
@@ -103,6 +109,15 @@ chmod +x ./gpg
 
 <a name="contributing-section"></a>
 ## Contributing
+
+We welcome contributions to PGPCrypto! Please follow these steps to contribute:
+1. Fork the repository
+2. Create a new branch for your feature or bug fix
+3. Make your changes and commit them with clear messages
+4. Push your changes to your fork
+5. Create a pull request against the `main` branch of the original repository
+
+Try `make help` to see all available commands and targets.
 
 <a name="development-setup-section"></a>
 ### Development Setup
@@ -164,6 +179,19 @@ make release VERSION="1.2.3"  # Replace with the desired version
 # Release the python library and Lambda layer separately
 make lib-release VERSION="1.2.3"  # Replace with the desired version
 make layer-release VERSION="1.2.3"  # Replace with the desired version
+```
+
+<a name="building-gpg-binary-section"></a>
+### Building GPG Binary
+
+> Note: Building the GPG binary is rarely needed. The binary will be automatically fetched from Artifactory when needed for building, testing, and releasing the Lambda layer.
+
+```bash
+# Build the GPG binary for Amazon Linux 2
+make gpg-build
+
+# Release the GPG binary to Artifactory
+make gpg-release
 ```
 
 <a name="metadata-section"></a>
