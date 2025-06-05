@@ -25,6 +25,7 @@ from pgpcrypto.pgp import PgpWrapper
 # Fetch the PGP keys from a secure location (e.g., AWS Secrets Manager)
 public_key = get_secret("pgpcrypto/recipient/public_key")  # Public key for encryption
 secret_key = get_secret("pgpcrypto/recipient/secret_key")  # Secret key for decryption
+passphrase = get_secret("pgpcrypto/recipient/passphrase")  # Passphrase for the secret key
 
 # Create a temporary directory for working files
 # This ensures all keys and files are isolated and cleaned up after use
@@ -52,7 +53,7 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     # Import secret key for decryption
     pgpw.import_secret_key(
         secret_key=secret_key,
-        passphrase="your-secure-passphrase"
+        passphrase=passphrase,
     )
     
     # Decrypt the file
