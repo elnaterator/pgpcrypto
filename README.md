@@ -3,19 +3,18 @@
 PGPCrypto simplifies PGP encryption and decryption in Python applications running on AWS environments. It provides a clean API wrapper around GnuPG, bundled with a compatible binary for Amazon Linux environments. This makes it particularly valuable for serverless applications like AWS Lambda functions where installing system dependencies is challenging. The library supports key management, file encryption/decryption, and works across all Python 3.10+ Lambda runtimes.
 
 ## Table of Contents
-- [PGPCrypto: Python Library and Lambda Layer for PGP Encryption](#pgpcrypto-python-library-and-lambda-layer-for-pgp-encryption)
-  - [Table of Contents](#table-of-contents)
-  - [Usage](#usage)
-  - [Installation](#installation)
-    - [Lambda Layer](#lambda-layer)
-    - [Python Library](#python-library)
-  - [Contributing](#contributing)
-    - [Development Setup](#development-setup)
-    - [Building](#building)
-    - [Testing](#testing)
-    - [Releasing](#releasing)
-  - [Metadata](#metadata)
+* [Usage](#usage-section)
+* [Installation](#installation-section)
+  * [Lambda Layer](#lambda-layer-section)
+  * [Python Library](#python-library-section)
+* [Contributing](#contributing-section)
+  * [Development Setup](#development-setup-section)
+  * [Building](#building-section)
+  * [Testing](#testing-section)
+  * [Releasing](#releasing-section)
+* [Metadata](#metadata-section)
 
+<a name="usage-section"></a>
 ## Usage
 
 ```python
@@ -65,8 +64,10 @@ This example demonstrates how to use PGPCrypto to encrypt and decrypt files usin
 
 See the `examples/` directory for more complete examples and uses cases such as AWS Lambda functions.  See also the [documentation](https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python).
 
+<a name="installation-section"></a>
 ## Installation
 
+<a name="lambda-layer-section"></a>
 ### Lambda Layer
 
 The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer:
@@ -81,6 +82,7 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
 
 3. Attach the layer to your Lambda function
 
+<a name="python-library-section"></a>
 ### Python Library
 
 For other AWS environments (EC2, ECS, Glue, etc.):
@@ -99,8 +101,10 @@ unzip gnupg-bin.zip
 chmod +x ./gpg
 ```
 
+<a name="contributing-section"></a>
 ## Contributing
 
+<a name="development-setup-section"></a>
 ### Development Setup
 
 Prerequisites:
@@ -118,6 +122,7 @@ cd pgpcrypto
 poetry install
 ```
 
+<a name="building-section"></a>
 ### Building
 
 ```bash
@@ -131,6 +136,7 @@ make build-lib
 make build-layer
 ```
 
+<a name="testing-section"></a>
 ### Testing
 
 ```bash
@@ -144,6 +150,7 @@ make test-unit
 make test-lambda
 ```
 
+<a name="releasing-section"></a>
 ### Releasing
 
 ```bash
@@ -159,6 +166,7 @@ make lib-release VERSION="1.2.3"  # Replace with the desired version
 make layer-release VERSION="1.2.3"  # Replace with the desired version
 ```
 
+<a name="metadata-section"></a>
 ## Metadata
 
 ```discoveryhub
