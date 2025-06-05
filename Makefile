@@ -69,7 +69,7 @@ test-lambda-invoke: ## Invoke the function test lambda function in docker contai
 	@echo "\n------ Lambda test for python3.12 runtime complete ------"
 	@echo "\n"
 
-test-lambda-docker-bash: ## Run bash in lambda docker container
+test-lambda-docker-bash: ## Run bash in lambda docker container SERVICE_NAME, which is one of python310, python311, python312
 	docker compose -f $(COMPOSE_FILE) run --build --entrypoint "" --rm $(SERVICE_NAME) bash
 
 help: ## Print these help docs

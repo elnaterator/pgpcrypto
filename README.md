@@ -3,17 +3,17 @@
 PGPCrypto simplifies PGP encryption and decryption in Python applications running on AWS environments. It provides a clean API wrapper around GnuPG, bundled with a compatible binary for Amazon Linux environments. This makes it particularly valuable for serverless applications like AWS Lambda functions where installing system dependencies is challenging. The library supports key management, file encryption/decryption, and works across all Python 3.10+ Lambda runtimes.
 
 ## Table of Contents
-* [Usage](#usage)
-* [Installation](#installation)
-  * [Lambda Layer](#lambda-layer)
-  * [Python Library](#python-library)
-* [Contributing](#contributing)
-  * [Development Setup](#development-setup)
-  * [Building](#building)
-  * [Testing](#testing)
-  * [Releasing](#releasing)
-  * [Building GPG Binary](#building-gpg-binary)
-* [Metadata](#metadata)
+- [Usage](#usage)
+- [Installation](#installation)
+  - [Lambda Layer](#lambda-layer)
+  - [Python Library](#python-library)
+- [Contributing](#contributing)
+  - [Development Setup](#development-setup)
+  - [Building](#building)
+  - [Testing](#testing)
+  - [Releasing](#releasing)
+  - [Building GPG Binary](#building-gpg-binary)
+- [Metadata](#metadata)
 
 <a name="usage"></a>
 ## Usage
@@ -143,10 +143,10 @@ poetry install
 make build
 
 # Build just the Python package
-make build-lib
+make lib-build
 
 # Build just the Lambda layer
-make build-layer
+make layer-build
 ```
 
 <a name="testing"></a>
@@ -172,11 +172,11 @@ export ARTIFACTORY_USER="<username>"
 export ARTIFACTORY_PASSWORD="<api-key>"
 
 # Release the Python library
-make release VERSION="1.2.3"  # Replace with the desired version
+make release VERSION="0.2.0"  # Replace with the desired version
 
 # Release the python library and Lambda layer separately
-make lib-release VERSION="1.2.3"  # Replace with the desired version
-make layer-release VERSION="1.2.3"  # Replace with the desired version
+make lib-release VERSION="0.2.0"  # Replace with the desired version
+make layer-release                # Version is automatically set based on the Python package version
 ```
 
 <a name="building-gpg-binary"></a>
