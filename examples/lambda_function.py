@@ -13,32 +13,33 @@ def get_secret(secret_name, region_name="us-east-1"):
         if "SecretString" in response:
             return response["SecretString"]
         else:
-            # Binary secrets are returned as base64-encoded data
-            return response["SecretBinary"]
+            print(f"Error no plain text secret {secret_name}: {str(e)}")
+            return None
     except Exception as e:
         # Handle exceptions (in production, you'd want more specific error handling)
         print(f"Error retrieving secret {secret_name}: {str(e)}")
         return None
+    
+def download_file(bucket_name, file_key, local_path):
+    """Download a file from S3 to a local path."""
+    s3 = boto3.client('s3')
+    try:
+        s3.download_file(bucket_name, file_key, local_path)
+        print(f"File downloaded from S3: {file_key} to {local_path}")
+    except Exception as e:
+        print(f"Error downloading file from S3: {str(e)}")
+        raise e
 
 
 def lambda_handler(event, context):
     """Lambda function handler to encrypt and decrypt files using PGP."""
     
     # Extract PGP data from secrets
-    recipient = get_secret("pgpcrypto/recipient") or "Test User"
+    recipient = get_secret("pgpcrypto/recipient")
     passphrase = get_secret("pgpcrypto/passphrase")
     pubkey = get_secret("pgpcrypto/public_key")
     seckey = get_secret("pgpcrypto/private_key")
     
-    # Fallback to local files if secrets not available (for testing)
-    if not pubkey or not seckey or not passphrase:
-        print("Warning: Using local test files instead of secrets")
-        passphrase = "Passphrase12345"
-        with open("data/test.pub.asc", "r") as f:
-            pubkey = f.read()
-        with open("data/test.sec.asc", "r") as f:
-            seckey = f.read()
-
     # Get input file path
     file_path = event.get("file_path", "data/test.txt")
 
@@ -47,6 +48,10 @@ def lambda_handler(event, context):
 
     # Should use a temporary directory
     with TemporaryDirectory(dir="/tmp") as tmpdir:
+        
+        # Download the input file from S3
+        download_file("my-bucket", file_path, f"{tmpdir}/test.txt")
+        
         # Initialize the pgp wrapper
         pgpw = PgpWrapper(
             gnupghome=f"{tmpdir}/.gnupghome",  # GnuPG stores keys here
@@ -61,12 +66,11 @@ def lambda_handler(event, context):
         )
 
         # Encrypt files (use the default key)
-        pgpw.encrypt_file(file_path, f"{tmpdir}/encrypted_file.pgp")
-
-        # Verify the encrypted file
-        with open(f"{tmpdir}/encrypted_file.pgp", "r") as f:
+        pgpw.encrypt_file(f"{tmpdir}/test.txt", f"{tmpdir}/encrypted_file.pgp")
+        
+        # Read the encrypted content
+        with open(f"{tmpdir}/encrypted_file.pgp", "rb") as f:
             enc_content = f.read()
-        assert enc_content.startswith("-----BEGIN PGP MESSAGE-----")
 
         # Import a secret key for decryption
         seckey_ids = pgpw.import_secret_key(
@@ -75,9 +79,7 @@ def lambda_handler(event, context):
         )
 
         # Decrypt files
-        pgpw.decrypt_file(
-            f"{tmpdir}/encrypted_file.pgp", f"{tmpdir}/decrypted_file.txt"
-        )
+        pgpw.decrypt_file(f"{tmpdir}/encrypted_file.pgp", f"{tmpdir}/decrypted_file.txt")
 
         # Verify the decrypted file
         with open(f"{tmpdir}/decrypted_file.txt", "r") as f:
