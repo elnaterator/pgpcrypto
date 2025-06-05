@@ -1,6 +1,6 @@
 # PGPCrypto: Python Library and Lambda Layer for PGP Encryption
 
-PGPCrypto simplifies PGP encryption and decryption in Python applications running on AWS environments. It provides a clean API wrapper around GnuPG, bundled with a compatible binary for Amazon Linux environments. This makes it particularly valuable for serverless applications like AWS Lambda functions where installing system dependencies is challenging. The library supports key management, file encryption/decryption, and works across all Python 3.10+ Lambda runtimes.
+PGPCrypto solves the challenge of implementing PGP encryption in AWS environments, especially Lambda functions. It bundles a compatible GnuPG binary with a simple Python API that handles key management, file encryption/decryption, and secure cleanup. Deploy as a Lambda layer for serverless applications or use as a library in any AWS environment (EC2, ECS, Glue, EMR). With just a few lines of code, securely encrypt and decrypt files using industry-standard PGP encryption across all Python 3.10+ runtimes.
 
 ## Table of Contents
 - [Usage](#usage)
