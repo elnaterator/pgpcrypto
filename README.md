@@ -3,21 +3,19 @@
 PGPCrypto simplifies PGP encryption and decryption in Python applications running on AWS environments. It provides a clean API wrapper around GnuPG, bundled with a compatible binary for Amazon Linux environments. This makes it particularly valuable for serverless applications like AWS Lambda functions where installing system dependencies is challenging. The library supports key management, file encryption/decryption, and works across all Python 3.10+ Lambda runtimes.
 
 ## Table of Contents
-- [PGPCrypto: Python Library and Lambda Layer for PGP Encryption](#pgpcrypto-python-library-and-lambda-layer-for-pgp-encryption)
-  - [Table of Contents](#table-of-contents)
-  - [Usage](#usage)
-  - [Installation](#installation)
-    - [Lambda Layer](#lambda-layer)
-    - [Python Library](#python-library)
-  - [Contributing](#contributing)
-    - [Development Setup](#development-setup)
-    - [Building](#building)
-    - [Testing](#testing)
-    - [Releasing](#releasing)
-    - [Building GPG Binary](#building-gpg-binary)
-  - [Metadata](#metadata)
+* [Usage](#usage)
+* [Installation](#installation)
+  * [Lambda Layer](#lambda-layer)
+  * [Python Library](#python-library)
+* [Contributing](#contributing)
+  * [Development Setup](#development-setup)
+  * [Building](#building)
+  * [Testing](#testing)
+  * [Releasing](#releasing)
+  * [Building GPG Binary](#building-gpg-binary)
+* [Metadata](#metadata)
 
-<a name="usage-section"></a>
+<a name="usage"></a>
 ## Usage
 
 ```python
@@ -67,10 +65,10 @@ This example demonstrates how to use PGPCrypto to encrypt and decrypt files usin
 
 See the `examples/` directory for more complete examples and uses cases such as AWS Lambda functions.  See also the [documentation](https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python).
 
-<a name="installation-section"></a>
+<a name="installation"></a>
 ## Installation
 
-<a name="lambda-layer-section"></a>
+<a name="lambda-layer"></a>
 ### Lambda Layer
 
 The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer:
@@ -85,7 +83,7 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
 
 3. Attach the layer to your Lambda function
 
-<a name="python-library-section"></a>
+<a name="python-library"></a>
 ### Python Library
 
 For other AWS environments (EC2, ECS, Glue, etc.), add the library to your Python project using one of the following methods, and ensure the GnuPG binary is available in your environment:
@@ -107,7 +105,7 @@ unzip gnupg-bin.zip
 chmod +x ./gpg
 ```
 
-<a name="contributing-section"></a>
+<a name="contributing"></a>
 ## Contributing
 
 We welcome contributions to PGPCrypto! Please follow these steps to contribute:
@@ -119,7 +117,7 @@ We welcome contributions to PGPCrypto! Please follow these steps to contribute:
 
 Try `make help` to see all available commands and targets.
 
-<a name="development-setup-section"></a>
+<a name="development-setup"></a>
 ### Development Setup
 
 Prerequisites:
@@ -137,7 +135,7 @@ cd pgpcrypto
 poetry install
 ```
 
-<a name="building-section"></a>
+<a name="building"></a>
 ### Building
 
 ```bash
@@ -151,7 +149,7 @@ make build-lib
 make build-layer
 ```
 
-<a name="testing-section"></a>
+<a name="testing"></a>
 ### Testing
 
 ```bash
@@ -165,7 +163,7 @@ make test-unit
 make test-lambda
 ```
 
-<a name="releasing-section"></a>
+<a name="releasing"></a>
 ### Releasing
 
 ```bash
@@ -181,7 +179,7 @@ make lib-release VERSION="1.2.3"  # Replace with the desired version
 make layer-release VERSION="1.2.3"  # Replace with the desired version
 ```
 
-<a name="building-gpg-binary-section"></a>
+<a name="building-gpg-binary"></a>
 ### Building GPG Binary
 
 > Note: Building the GPG binary is rarely needed. The binary will be automatically fetched from Artifactory when needed for building, testing, and releasing the Lambda layer.
@@ -194,7 +192,7 @@ make gpg-build
 make gpg-release
 ```
 
-<a name="metadata-section"></a>
+<a name="metadata"></a>
 ## Metadata
 
 ```discoveryhub
