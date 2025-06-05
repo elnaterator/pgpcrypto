@@ -22,19 +22,28 @@ PGPCrypto simplifies PGP encryption and decryption in Python applications runnin
 from tempfile import TemporaryDirectory
 from pgpcrypto.pgp import PgpWrapper
 
+# Fetch the PGP keys from a secure location (e.g., AWS Secrets Manager)
+public_key = get_secret("pgpcrypto/recipient/public_key")  # Public key for encryption
+secret_key = get_secret("pgpcrypto/recipient/secret_key")  # Secret key for decryption
+
 # Create a temporary directory for working files
+# This ensures all keys and files are isolated and cleaned up after use
 with TemporaryDirectory(dir="/tmp") as tmpdir:
+  
     # Initialize the PGP wrapper
     pgpw = PgpWrapper(
         gnupghome=f"{tmpdir}/.gnupghome",
         gpgbinary='/opt/python/gpg'  # Path to the bundled gpg binary
+        # gpgbinary='/opt/python/gpg' is the default path in Lambda layers
+        # if using the library outside of Lambda, adjust the path accordingly
     )
     
     # Import keys
     pgpw.import_public_key(
-        public_key=open("recipient.pub.asc").read(),
+        public_key=public_key,
         recipient="user@example.com",
-        default=True
+        default=True  # Set as default key for encryption
+        # When working with multiple keys you may set default=False and specify the recipient explicitly on encryption
     )
     
     # Encrypt a file
@@ -42,17 +51,19 @@ with TemporaryDirectory(dir="/tmp") as tmpdir:
     
     # Import secret key for decryption
     pgpw.import_secret_key(
-        secret_key=open("secret.key.asc").read(),
+        secret_key=secret_key,
         passphrase="your-secure-passphrase"
     )
     
     # Decrypt the file
     pgpw.decrypt_file("encrypted.pgp", "decrypted.txt")
+    # When working with multiple keys, the correct key will be automatically selected based on the encrypted file's metadata
+
 ```
 
 This example demonstrates how to use PGPCrypto to encrypt and decrypt files using PGP keys. The library handles key management, encryption, and decryption making it easy to integrate PGP functionality into your Python applications.
 
-For more usage instructions, refer to examples in the `examples/` directory or the [documentation](https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python).
+See the `examples/` directory for more complete examples and uses cases such as AWS Lambda functions.  See also the [documentation](https://pages.experian.local/display/ARCCOE/PGP+Encryption+and+Decryption+with+Python).
 
 ## Installation
 
@@ -62,8 +73,8 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
 
 1. Download the Lambda layer zip file:
    ```bash
-   VERSION="1.0.0"  # Replace with the desired version
-   curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda_layer-pgpcrypto-$VERSION.zip
+   VERSION="0.2.0"  # Replace with the desired version
+   curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda-layer-pgpcrypto-$VERSION.zip
    ```
 
 2. Deploy as a Lambda layer (compatible with Python 3.10, 3.11, and 3.12 runtimes on x86_64 architecture)
