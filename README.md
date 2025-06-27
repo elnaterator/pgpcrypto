@@ -81,7 +81,7 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
    curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda-layer-pgpcrypto-$VERSION.zip
    ```
 
-2. Deploy as a Lambda layer (compatible with Python 3.10, 3.11, and 3.12 runtimes on x86_64 architecture)
+2. Deploy as a Lambda layer (compatible with Python 3.10, 3.11, 3.12, and 3.13 runtimes on x86_64 architecture)
 
 3. Attach the layer to your Lambda function
 

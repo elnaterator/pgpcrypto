@@ -7,6 +7,7 @@ SERVICE_NAME = app
 
 clean: ## Clean up build artifacts
 	rm -rf dist/ temp/ .venv/ .pytest_cache/
+	docker compose -f $(COMPOSE_FILE) down --remove-orphans
 
 build: lib-build layer-build ## Build pgpcrypto python library and lambda layer zip
 
@@ -67,6 +68,9 @@ test-lambda-invoke: ## Invoke the function test lambda function in docker contai
 	@echo "\n------ Invoking Lambda Function for python3.12 runtime ------"
 	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9002/2015-03-31/functions/function/invocations | jq
 	@echo "\n------ Lambda test for python3.12 runtime complete ------"
+	@echo "\n------ Invoking Lambda Function for python3.13 runtime ------"
+	curl -X POST -H "Content-Type: application/json" -d '{}' http://localhost:9003/2015-03-31/functions/function/invocations | jq
+	@echo "\n------ Lambda test for python3.13 runtime complete ------"
 	@echo "\n"
 
 test-lambda-docker-bash: ## Run bash in lambda docker container SERVICE_NAME, which is one of python310, python311, python312
