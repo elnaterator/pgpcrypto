@@ -28,3 +28,13 @@ services:
       - ~/.aws:/root/.aws
     ports:
       - 9002:8080
+
+  python313:
+    image: gnupg-python-lambda:python3.13
+    build:
+      context: .
+      dockerfile: Dockerfile.test.py3.13
+    volumes:
+      - ~/.aws:/root/.aws
+    ports:
+      - 9003:8080

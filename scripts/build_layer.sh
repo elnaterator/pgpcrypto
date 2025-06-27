@@ -41,11 +41,13 @@ echo "Installing wheel to common directory..."
 mkdir -p dist/python/lib/python3.10
 mkdir -p dist/python/lib/python3.11
 mkdir -p dist/python/lib/python3.12
+mkdir -p dist/python/lib/python3.13
 
 # Create symbolic links to the common site-packages
 ln -sf ../python/site-packages dist/python/lib/python3.10/site-packages
 ln -sf ../python/site-packages dist/python/lib/python3.11/site-packages
 ln -sf ../python/site-packages dist/python/lib/python3.12/site-packages
+ln -sf ../python/site-packages dist/python/lib/python3.13/site-packages
 
 # Create the Lambda layer zip
 echo "Creating Lambda layer zip..."
