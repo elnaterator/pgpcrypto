@@ -26,7 +26,7 @@ gpg-fetch: ## If 'gpg' binary not found locally download from artifactory
 
 # Release
 
-release: lib-release layer-release ## Release pgpcrypto library and lambda layer
+release: lib-release layer-release ## Release pgpcrypto library and lambda layer version VERSION
 
 update-version: ## Update the version of pgpcrypto to VERSION
 	chmod +x scripts/update_version.sh && ./scripts/update_version.sh $(VERSION)
@@ -34,7 +34,7 @@ update-version: ## Update the version of pgpcrypto to VERSION
 lib-release: update-version lib-build ## Release a new version of pgpcrypto to experian artifactory with version VERSION
 	chmod +x scripts/release_lib.sh && ./scripts/release_lib.sh
 
-layer-release: ## Release lambda layer to AWS Lambda with name LAYER
+layer-release: ## Release lambda layer to artifactory
 	chmod +x scripts/release_layer.sh && ./scripts/release_layer.sh
 
 gpg-release: ## Release gpg binary to artifactory, use existing gpg binary if found locally, or else build
