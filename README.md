@@ -77,7 +77,7 @@ The easiest way to use PGPCrypto in AWS Lambda is to deploy it as a Lambda layer
 
 1. Download the Lambda layer zip file:
    ```bash
-   VERSION="0.2.0"  # Replace with the desired version
+   VERSION="0.3.0"  # Replace with the desired version
    curl -o lambda_layer.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/lambda_layer/lambda-layer-pgpcrypto-$VERSION.zip
    ```
 
@@ -102,7 +102,7 @@ poetry source add artifactory https://artifacts.experian.local/artifactory/api/p
 poetry add pgpcrypto
 
 # Download and extract the GnuPG binary
-curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-1.4.23-al2-x86_64.zip
+curl -o gnupg-bin.zip https://artifacts.experian.local/artifactory/batch-products-local/pgpcrypto/gnupg-binary/gnupg-bin-2.0.22-al2-x86_64.zip
 unzip gnupg-bin.zip
 chmod +x ./gpg
 ```
@@ -174,10 +174,10 @@ export ARTIFACTORY_USER="<username>"
 export ARTIFACTORY_PASSWORD="<api-key>"
 
 # Release the Python library
-make release VERSION="0.2.0"  # Replace with the desired version
+make release VERSION="0.3.0"  # Replace with the desired version
 
 # Release the python library and Lambda layer separately
-make lib-release VERSION="0.2.0"  # Replace with the desired version
+make lib-release VERSION="0.3.0"  # Replace with the desired version
 make layer-release                # Version is automatically set based on the Python package version
 ```
 
